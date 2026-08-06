@@ -1,11 +1,9 @@
 -r requirements.txt
 
-# Development dependencies. TODO: pin exact versions.
-#
-# ruff
-# mypy
-# pytest
-# pytest-asyncio
-# pytest-cov
-# httpx
-# factory-boy
+ruff==0.8.1
+mypy==1.13.0
+pytest==8.4.2
+pytest-asyncio==0.23.8
+pytest-cov==5.0.0
+httpx==0.28.0
+factory-boy==3.3.0
