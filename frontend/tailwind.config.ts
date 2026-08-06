@@ -1,17 +1,16 @@
 // Tailwind configuration.
-// TODO: define the RentFlow design tokens (colors, radii, typography) here,
-// backed by the CSS custom properties declared in src/app/globals.css.
+// RentFlow uses the App Router and a minimal global CSS theme.
 
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: ["./src/**/*.{ts,tsx}"],
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   darkMode: "class",
   theme: {
     extend: {
-      // colors: {},
-      // borderRadius: {},
-      // fontFamily: {},
+      fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
     },
   },
   plugins: [],
