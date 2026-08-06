@@ -1,0 +1,36 @@
+# Frontend CI — lint, typecheck, test, build.
+# TODO: enable the steps once frontend/package.json has real dependencies and a lockfile.
+
+name: CI · Frontend
+
+on:
+  pull_request:
+    paths: ["frontend/**", ".github/workflows/ci-frontend.yml"]
+  push:
+    branches: [main, develop]
+    paths: ["frontend/**", ".github/workflows/ci-frontend.yml"]
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # - run: npm ci
+      # - run: npm run lint
+      # - run: npm run typecheck
+      # - run: npm run test
+      # - run: npm run build
+
+      - name: Placeholder
+        run: echo "TODO: enable frontend CI steps"

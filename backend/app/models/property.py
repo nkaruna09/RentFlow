@@ -1,0 +1,3 @@
+﻿"""Property table."""
+
+# TODO: implement

@@ -1,0 +1,17 @@
+{
+  "name": "rentflow-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RentFlow frontend — Next.js + React + TypeScript + Tailwind CSS",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "test": "echo \"TODO: configure the test runner\" && exit 0"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

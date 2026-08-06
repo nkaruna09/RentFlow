@@ -1,0 +1,61 @@
+# Deploy to Azure Container Apps.
+# Auth uses OIDC federated credentials — no long-lived secrets.
+# TODO: enable once infra/ is provisioned and the GitHub secrets below exist.
+
+name: CD · Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  id-token: write   # required for OIDC
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'staging' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # - uses: azure/login@v2
+      #   with:
+      #     client-id: ${{ secrets.AZURE_CLIENT_ID }}
+      #     tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+      #     subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # - name: Build and push images
+      #   run: |
+      #     az acr login --name ${{ vars.ACR_NAME }}
+      #     docker build -t ${{ vars.ACR_NAME }}.azurecr.io/rentflow-api:${{ github.sha }} ./backend
+      #     docker build -t ${{ vars.ACR_NAME }}.azurecr.io/rentflow-web:${{ github.sha }} ./frontend
+      #     docker push ${{ vars.ACR_NAME }}.azurecr.io/rentflow-api:${{ github.sha }}
+      #     docker push ${{ vars.ACR_NAME }}.azurecr.io/rentflow-web:${{ github.sha }}
+
+      # - name: Run migrations
+      #   # Must complete before the new revision takes traffic.
+      #   run: az containerapp job start --name rentflow-migrate --resource-group ${{ vars.RESOURCE_GROUP }}
+
+      # - name: Deploy API
+      #   run: |
+      #     az containerapp update --name rentflow-api \
+      #       --resource-group ${{ vars.RESOURCE_GROUP }} \
+      #       --image ${{ vars.ACR_NAME }}.azurecr.io/rentflow-api:${{ github.sha }}
+
+      # - name: Deploy web
+      #   run: |
+      #     az containerapp update --name rentflow-web \
+      #       --resource-group ${{ vars.RESOURCE_GROUP }} \
+      #       --image ${{ vars.ACR_NAME }}.azurecr.io/rentflow-web:${{ github.sha }}
+
+      - name: Placeholder
+        run: echo "TODO: enable deployment steps"

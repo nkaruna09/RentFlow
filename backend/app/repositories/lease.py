@@ -1,0 +1,3 @@
+﻿"""Lease queries."""
+
+# TODO: implement

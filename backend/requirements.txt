@@ -1,0 +1,16 @@
+# Runtime dependencies. TODO: pin exact versions before the first build.
+#
+# fastapi
+# uvicorn[standard]
+# pydantic
+# pydantic-settings
+# sqlalchemy[asyncio]
+# asyncpg
+# alembic
+# python-jose[cryptography]      # JWT
+# passlib[bcrypt]                # password hashing
+# python-multipart               # form / file uploads
+# azure-identity
+# azure-storage-blob
+# azure-keyvault-secrets
+# opencensus-ext-azure           # Application Insights

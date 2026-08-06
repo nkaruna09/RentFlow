@@ -1,0 +1,3 @@
+﻿"""Property queries."""
+
+# TODO: implement
