@@ -1,15 +1,25 @@
 ﻿"""Liveness / readiness probes for Azure Container Apps."""
 
-from fastapi import APIRouter
+from __future__ import annotations
 
-router = APIRouter(tags=["health"])
+from typing import Any
+
+from fastapi import APIRouter, HTTPException
+
+from app.db.session import database_is_healthy
+
+router = APIRouter(prefix="/health", tags=["health"])
 
 
-@router.get("/health/live")
+@router.get("/live")
 def health_live() -> dict[str, str]:
     return {"status": "ok", "service": "rentflow-api"}
 
 
-@router.get("/health/ready")
-def health_ready() -> dict[str, str]:
-    return {"status": "ok"}
+@router.get("/ready")
+async def health_ready() -> dict[str, Any]:
+    try:
+        await database_is_healthy()
+    except Exception as exc:  # pragma: no cover - exercised by live container checks
+        raise HTTPException(status_code=503, detail="database unavailable") from exc
+    return {"status": "ok", "database": "reachable"}
