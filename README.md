@@ -66,24 +66,80 @@ See [`docs/database.md`](docs/database.md) for the full schema.
 
 ---
 
-## Getting started (once implemented)
+## Getting started locally
 
-```bash
-git clone https://github.com/nkaruna09/RentFlow.git
-cd RentFlow
+### Prerequisites
 
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.local
+- Python 3.12+
+- Node.js 18+
+- npm
+- Docker Desktop or Docker Engine (for the local Postgres service)
 
-docker compose up --build
+### 1) Start the database
+
+From the repo root:
+
+```powershell
+docker compose up -d db
 ```
+
+This starts PostgreSQL on `localhost:5432`.
+
+### 2) Start the backend
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements-dev.txt
+Copy-Item .env.example .env
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+The API should be available at:
+
+- API: http://localhost:8000
+- Swagger UI: http://localhost:8000/docs
+- Health checks:
+  - http://localhost:8000/api/v1/health/live
+  - http://localhost:8000/api/v1/health/ready
+
+> Important: start Uvicorn from the `backend` folder so Python resolves the `app` package correctly. Running it from the repo root may fail with `ModuleNotFoundError: No module named 'app'`.
+
+### 3) Start the frontend
+
+In a second terminal:
+
+```powershell
+cd frontend
+npm install
+Copy-Item .env.example .env.local
+npm run dev
+```
+
+The frontend should be available at:
+
+- Frontend: http://localhost:3000
+
+### 4) Verify the app is running
 
 | Service  | URL                            |
 | -------- | ------------------------------ |
 | Frontend | http://localhost:3000          |
 | API      | http://localhost:8000          |
 | API docs | http://localhost:8000/docs     |
+| Liveness | http://localhost:8000/api/v1/health/live |
+| Readiness | http://localhost:8000/api/v1/health/ready |
 | Postgres | localhost:5432                 |
+
+### Optional: run everything together with Docker Compose
+
+```powershell
+docker compose up --build
+```
+
+This starts the database, API, and web app together. If you want to run the backend and frontend manually for active development, keep them separate as shown above.
 
 ---
 
