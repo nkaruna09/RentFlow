@@ -1,22 +1,23 @@
 import sqlalchemy as sa
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.api.deps import get_db
 from app.db.base import Base
+from app.db.session import async_session_factory
 
 
 @pytest.mark.asyncio
-async def test_async_session_factory_can_select_one(monkeypatch):
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
-    factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
-
-    monkeypatch.setattr("app.db.session.engine", engine)
-    monkeypatch.setattr("app.db.session.async_session_factory", factory)
-
-    async with factory() as session:
+async def test_async_session_factory_can_select_one():
+    async with async_session_factory() as session:
         result = await session.execute(sa.text("SELECT 1"))
         assert result.scalar_one() == 1
 
-    assert callable(get_db)
+    session_gen = get_db()
+    session = await session_gen.__anext__()
+    try:
+        result = await session.execute(sa.text("SELECT 1"))
+        assert result.scalar_one() == 1
+    finally:
+        await session_gen.aclose()
+
     assert Base.metadata is not None
