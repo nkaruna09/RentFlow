@@ -5,7 +5,7 @@
 FROM node:25-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 
 # ---------- dev ----------
 FROM node:25-alpine AS dev
