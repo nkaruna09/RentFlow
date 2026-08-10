@@ -1,3 +1,3 @@
-﻿"""Unit CRUD endpoints."""
+"""Unit CRUD endpoints."""
 
 # TODO: implement

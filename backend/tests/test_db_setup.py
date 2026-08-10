@@ -1,5 +1,5 @@
-import sqlalchemy as sa
 import pytest
+import sqlalchemy as sa
 
 from app.api.deps import get_db
 from app.db.base import Base

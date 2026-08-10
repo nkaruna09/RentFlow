@@ -1,3 +1,3 @@
-﻿"""Maintenance request endpoints."""
+"""Maintenance request endpoints."""
 
 # TODO: implement

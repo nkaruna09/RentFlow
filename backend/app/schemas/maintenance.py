@@ -1,3 +1,3 @@
-﻿"""Pydantic schemas for maintenance requests."""
+"""Pydantic schemas for maintenance requests."""
 
 # TODO: implement

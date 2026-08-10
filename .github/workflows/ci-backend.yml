@@ -1,5 +1,4 @@
 # Backend CI — lint, typecheck, test against a real PostgreSQL service.
-# TODO: enable the steps once backend dependencies are pinned.
 
 name: CI · Backend
 
@@ -44,12 +43,9 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      # - run: pip install -r requirements-dev.txt
-      # - run: ruff check .
-      # - run: ruff format --check .
-      # - run: mypy app
-      # - run: alembic upgrade head
-      # - run: pytest --cov=app --cov-report=term-missing
-
-      - name: Placeholder
-        run: echo "TODO: enable backend CI steps"
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy app
+      - run: alembic upgrade head
+      - run: pytest --cov=app --cov-report=term-missing

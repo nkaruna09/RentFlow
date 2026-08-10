@@ -1,3 +1,3 @@
-﻿"""Pydantic schemas for units."""
+"""Pydantic schemas for units."""
 
 # TODO: implement

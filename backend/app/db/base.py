@@ -1,4 +1,4 @@
-﻿"""SQLAlchemy declarative base; imports every model so Alembic can discover them."""
+"""SQLAlchemy declarative base; imports every model so Alembic can discover them."""
 
 from __future__ import annotations
 
@@ -10,6 +10,15 @@ class Base(DeclarativeBase):
 
 
 # Import every model module so SQLAlchemy metadata is populated for Alembic autogeneration.
-from app.models import document, lease, maintenance, payment, property, tenant, unit, user  # noqa: F401,E402
+from app.models import (  # noqa: F401,E402
+    document,
+    lease,
+    maintenance,
+    payment,
+    property,
+    tenant,
+    unit,
+    user,
+)
 
 __all__ = ["Base"]

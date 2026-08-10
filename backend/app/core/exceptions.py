@@ -1,4 +1,4 @@
-﻿"""Domain exceptions and their HTTP handlers."""
+"""Domain exceptions and their HTTP handlers."""
 
 from __future__ import annotations
 
@@ -45,7 +45,9 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
     @app.exception_handler(RequestValidationError)
-    async def handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    async def handle_validation_error(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
         return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
     @app.exception_handler(StarletteHTTPException)

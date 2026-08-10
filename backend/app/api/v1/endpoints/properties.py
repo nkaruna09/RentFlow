@@ -1,3 +1,3 @@
-﻿"""Property CRUD endpoints."""
+"""Property CRUD endpoints."""
 
 # TODO: implement

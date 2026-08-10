@@ -1,3 +1,3 @@
-﻿"""Payment and arrears queries."""
+"""Payment and arrears queries."""
 
 # TODO: implement

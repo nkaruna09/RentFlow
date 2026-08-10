@@ -1,3 +1,3 @@
-﻿"""Decimal-safe currency helpers."""
+"""Decimal-safe currency helpers."""
 
 # TODO: implement

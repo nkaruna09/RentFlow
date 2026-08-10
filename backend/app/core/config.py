@@ -1,4 +1,4 @@
-﻿"""Pydantic Settings loaded from environment / Azure Key Vault."""
+"""Pydantic Settings loaded from environment / Azure Key Vault."""
 
 from __future__ import annotations
 

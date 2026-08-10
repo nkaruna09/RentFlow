@@ -1,3 +1,3 @@
-﻿"""Login, refresh, registration endpoints."""
+"""Login, refresh, registration endpoints."""
 
 # TODO: implement

@@ -1,3 +1,3 @@
-﻿"""Tenant CRUD endpoints."""
+"""Tenant CRUD endpoints."""
 
 # TODO: implement

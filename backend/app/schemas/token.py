@@ -1,3 +1,3 @@
-﻿"""Auth token schemas."""
+"""Auth token schemas."""
 
 # TODO: implement

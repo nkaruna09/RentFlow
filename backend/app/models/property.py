@@ -1,3 +1,3 @@
-﻿"""Property table."""
+"""Property table."""
 
 # TODO: implement

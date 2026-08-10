@@ -1,3 +1,3 @@
-﻿"""Authentication and registration business rules."""
+"""Authentication and registration business rules."""
 
 # TODO: implement

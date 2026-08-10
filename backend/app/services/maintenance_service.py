@@ -1,3 +1,3 @@
-﻿"""Work-order routing and status transitions."""
+"""Work-order routing and status transitions."""
 
 # TODO: implement

@@ -1,4 +1,4 @@
-﻿"""Liveness / readiness probes for Azure Container Apps."""
+"""Liveness / readiness probes for Azure Container Apps."""
 
 from __future__ import annotations
 
