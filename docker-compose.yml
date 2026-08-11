@@ -1,5 +1,4 @@
 # Local development stack: web + api + postgres.
-# TODO: fill in once the frontend and backend have real entrypoints.
 
 services:
   db:
@@ -9,22 +8,24 @@ services:
       POSTGRES_PASSWORD: rentflow
       POSTGRES_DB: rentflow
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U rentflow"]
+      test: ["CMD-SHELL", "pg_isready -U rentflow -d rentflow"]
       interval: 5s
+      timeout: 5s
       retries: 5
+      start_period: 5s
 
   api:
     build:
       context: ./backend
-      # TODO: target the dev stage once the Dockerfile is written
+      target: dev
     env_file:
       - ./backend/.env
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     volumes:
       - ./backend:/app
     depends_on:
@@ -34,16 +35,20 @@ services:
   web:
     build:
       context: ./frontend
-      # TODO: target the dev stage once the Dockerfile is written
+      target: dev
     env_file:
       - ./frontend/.env.local
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3000}:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   postgres-data:
