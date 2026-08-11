@@ -1,3 +1,3 @@
-﻿"""Payment and invoice tables."""
+"""Payment and invoice tables."""
 
 # TODO: implement

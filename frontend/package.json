@@ -10,7 +10,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "test": "echo \"TODO: configure the test runner\" && exit 0"
+    "test": "vitest run"
   },
   "dependencies": {
     "next": "15.3.1",
@@ -18,7 +18,7 @@
     "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "@types/node": "20.14.7",
+    "@types/node": "22.15.0",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.3",
     "autoprefixer": "10.4.19",
@@ -27,6 +27,7 @@
     "prettier": "3.1.0",
     "tailwindcss": "3.4.5",
     "typescript": "5.8.2",
+    "vitest": "3.2.4",
     "eslint-config-next": "15.3.1"
   }
 }

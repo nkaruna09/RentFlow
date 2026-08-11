@@ -1,3 +1,3 @@
-﻿"""Invoice and payment endpoints."""
+"""Invoice and payment endpoints."""
 
 # TODO: implement

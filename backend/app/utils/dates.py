@@ -1,3 +1,3 @@
-﻿"""Billing-period and proration date helpers."""
+"""Billing-period and proration date helpers."""
 
 # TODO: implement

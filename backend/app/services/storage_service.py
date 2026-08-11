@@ -1,3 +1,3 @@
-﻿"""Azure Blob Storage uploads for leases and receipts."""
+"""Azure Blob Storage uploads for leases and receipts."""
 
 # TODO: implement

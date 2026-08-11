@@ -1,3 +1,3 @@
-﻿"""Pydantic schemas for properties."""
+"""Pydantic schemas for properties."""
 
 # TODO: implement

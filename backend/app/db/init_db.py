@@ -1,3 +1,3 @@
-﻿"""Seed data / first-run bootstrap."""
+"""Seed data / first-run bootstrap."""
 
 # TODO: implement

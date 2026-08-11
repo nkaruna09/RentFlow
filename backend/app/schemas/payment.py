@@ -1,3 +1,3 @@
-﻿"""Pydantic schemas for payments and invoices."""
+"""Pydantic schemas for payments and invoices."""
 
 # TODO: implement

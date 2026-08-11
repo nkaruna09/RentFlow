@@ -1,4 +1,4 @@
-﻿"""Shared FastAPI dependencies: db session, current user, role guards, pagination."""
+"""Shared FastAPI dependencies: db session, current user, role guards, pagination."""
 
 from __future__ import annotations
 

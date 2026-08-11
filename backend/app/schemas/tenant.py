@@ -1,3 +1,3 @@
-﻿"""Pydantic schemas for tenants."""
+"""Pydantic schemas for tenants."""
 
 # TODO: implement

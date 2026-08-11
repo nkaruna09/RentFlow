@@ -1,3 +1,3 @@
-﻿"""Lease lifecycle endpoints: create, renew, terminate."""
+"""Lease lifecycle endpoints: create, renew, terminate."""
 
 # TODO: implement

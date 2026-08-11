@@ -1,3 +1,3 @@
-﻿"""Maintenance request table."""
+"""Maintenance request table."""
 
 # TODO: implement

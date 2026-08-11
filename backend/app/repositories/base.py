@@ -1,3 +1,3 @@
-﻿"""Generic async CRUD repository."""
+"""Generic async CRUD repository."""
 
 # TODO: implement

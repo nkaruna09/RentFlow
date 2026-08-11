@@ -1,7 +1,8 @@
-﻿"""Pydantic Settings loaded from environment / Azure Key Vault."""
+"""Pydantic Settings loaded from environment / Azure Key Vault."""
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,10 @@ class Settings(BaseSettings):
         if value is None:
             return []
         if isinstance(value, str):
+            if value.lstrip().startswith("["):
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return [str(item).strip() for item in parsed if str(item).strip()]
             return [item.strip() for item in value.split(",") if item.strip()]
         if isinstance(value, list):
             return [str(item).strip() for item in value if str(item).strip()]

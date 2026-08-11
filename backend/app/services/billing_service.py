@@ -1,3 +1,3 @@
-﻿"""Rent invoice generation, late fees, payment reconciliation."""
+"""Rent invoice generation, late fees, payment reconciliation."""
 
 # TODO: implement

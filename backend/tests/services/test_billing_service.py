@@ -1,3 +1,3 @@
-﻿"""Billing rules tests."""
+"""Billing rules tests."""
 
 # TODO: implement

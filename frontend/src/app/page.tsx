@@ -1,4 +1,6 @@
-﻿export default function HomePage() {
+﻿import React from "react";
+
+export default function HomePage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-emerald-50">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center px-6 py-12">

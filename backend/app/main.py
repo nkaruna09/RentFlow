@@ -1,7 +1,8 @@
-﻿"""FastAPI application factory: middleware, CORS, routers, lifespan, health probes."""
+"""FastAPI application factory: middleware, CORS, routers, lifespan, health probes."""
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -15,14 +16,16 @@ from app.core.logging import setup_logging
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = app.state.settings
     logger = setup_logging(settings)
     logger.info("Starting RentFlow API", extra={"context": {"environment": settings.environment}})
     try:
         yield
     finally:
-        logger.info("Stopping RentFlow API", extra={"context": {"environment": settings.environment}})
+        logger.info(
+            "Stopping RentFlow API", extra={"context": {"environment": settings.environment}}
+        )
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:

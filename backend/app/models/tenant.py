@@ -1,3 +1,3 @@
-﻿"""Tenant profile table."""
+"""Tenant profile table."""
 
 # TODO: implement
