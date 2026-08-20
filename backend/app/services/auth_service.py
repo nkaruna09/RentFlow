@@ -73,8 +73,9 @@ async def authenticate_user(db: AsyncSession, *, email: str, password: str) -> T
     return _issue_token_pair(user)
 
 
-async def refresh_tokens(db: AsyncSession, refresh_token: str) -> TokenPair:
-    """Rotate a valid refresh token and return a new token pair."""
+async def _resolve_refresh_token(
+    db: AsyncSession, refresh_token: str
+) -> tuple[User, uuid.UUID, datetime]:
     payload = decode_token(refresh_token, expected_type="refresh")
     subject = payload.get("sub")
     raw_jti = payload.get("jti")
@@ -99,13 +100,25 @@ async def refresh_tokens(db: AsyncSession, refresh_token: str) -> TokenPair:
     if user is None or not user.is_active:
         raise AuthenticationError("Could not validate refresh token")
 
+    return user, jti, datetime.fromtimestamp(expires_at, tz=UTC)
+
+
+async def refresh_tokens(db: AsyncSession, refresh_token: str) -> TokenPair:
+    """Rotate a valid refresh token and return a new token pair."""
+    user, jti, expires_at = await _resolve_refresh_token(db, refresh_token)
     await revoke_token(
         db,
         jti=jti,
         user_id=user.id,
-        expires_at=datetime.fromtimestamp(expires_at, tz=UTC),
+        expires_at=expires_at,
     )
     return _issue_token_pair(user)
 
 
-__all__ = ["authenticate_user", "create_user", "refresh_tokens"]
+async def logout_user(db: AsyncSession, refresh_token: str) -> None:
+    """Revoke the presented refresh token."""
+    user, jti, expires_at = await _resolve_refresh_token(db, refresh_token)
+    await revoke_token(db, jti=jti, user_id=user.id, expires_at=expires_at)
+
+
+__all__ = ["authenticate_user", "create_user", "logout_user", "refresh_tokens"]

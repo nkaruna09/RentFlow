@@ -151,3 +151,56 @@ async def test_refresh_rejects_access_token() -> None:
         )
 
     assert response.status_code == 401
+
+
+async def test_logout_revokes_refresh_token(db_session: AsyncSession, make_user) -> None:
+    user = await make_user()
+    refresh_token = create_refresh_token(str(user.id))
+
+    async def override_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            logout_response = await client.post(
+                "/api/v1/auth/logout", json={"refresh_token": refresh_token}
+            )
+            refresh_response = await client.post(
+                "/api/v1/auth/refresh", json={"refresh_token": refresh_token}
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert logout_response.status_code == 204
+    assert refresh_response.status_code == 401
+    assert refresh_response.json() == {"detail": "Refresh token has been revoked"}
+
+
+async def test_me_returns_current_user(db_session: AsyncSession, make_user) -> None:
+    user = await make_user(email="current-user@example.com")
+    access_token = create_access_token(str(user.id))
+
+    async def override_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get(
+                "/api/v1/auth/me", headers={"Authorization": f"Bearer {access_token}"}
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["id"] == str(user.id)
+    assert response.json()["email"] == user.email
+    assert "hashed_password" not in response.json()
+
+
+async def test_me_rejects_missing_access_token() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/v1/auth/me")
+
+    assert response.status_code == 401
