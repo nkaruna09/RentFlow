@@ -58,4 +58,4 @@ jobs:
       #       --image ${{ vars.ACR_NAME }}.azurecr.io/rentflow-web:${{ github.sha }}
 
       - name: Placeholder
-        run: echo "TODO: enable deployment steps"
+        run: 'echo "TODO: enable deployment steps"'
