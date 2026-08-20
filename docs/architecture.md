@@ -53,6 +53,11 @@ Rules:
 - JWT access tokens plus refresh tokens issued by the backend.
 - Roles: `landlord`, `manager`, `tenant`.
 - Authorisation is enforced in FastAPI dependencies (`app/api/deps`), not in the frontend. The frontend hides UI; the backend is the authority.
+- Endpoint modules create reusable guards such as
+  `property_managers = require_role(UserRole.LANDLORD, UserRole.MANAGER)`, then inject them
+  with `Depends(property_managers)`. The dependency first authenticates the access token,
+  then returns the current user or raises `403`. Tenant-accessible endpoints explicitly include
+  `UserRole.TENANT`.
 
 **TODO:** decide between backend-issued JWTs alone and Azure Entra ID as the identity provider.
 

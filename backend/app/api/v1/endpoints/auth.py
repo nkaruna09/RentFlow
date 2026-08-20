@@ -5,14 +5,15 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_user
+from app.api.deps import require_role
 from app.db.session import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.token import LoginRequest, RefreshRequest, TokenPair
 from app.schemas.user import UserCreate, UserRead
 from app.services.auth_service import authenticate_user, create_user, logout_user, refresh_tokens
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+all_user_roles = require_role(UserRole.LANDLORD, UserRole.MANAGER, UserRole.TENANT)
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
@@ -45,6 +46,8 @@ async def logout(request: RefreshRequest, db: AsyncSession = Depends(get_db)) ->
 
 
 @router.get("/me", response_model=UserRead)
-async def me(current_user: User = Depends(get_current_user)) -> UserRead:
+async def me(
+    current_user: User = Depends(all_user_roles),
+) -> UserRead:
     """Return the authenticated user's profile."""
     return UserRead.model_validate(current_user)
