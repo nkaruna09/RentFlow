@@ -11,4 +11,4 @@ python-multipart==0.0.9
 azure-identity==1.19.0
 azure-storage-blob==12.24.0
 azure-keyvault-secrets==4.8.0
-opencensus-ext-azure==1.1.0
+opencensus-ext-azure==1.1.15
