@@ -17,6 +17,7 @@ from app.models import (  # noqa: F401,E402
     payment,
     property,
     tenant,
+    token_blocklist,
     unit,
     user,
 )

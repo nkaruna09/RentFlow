@@ -19,6 +19,10 @@ ignore = ["S101"]   # assert is fine in tests
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S", "N"]
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's DI pattern is `param: T = Depends(...)`; the call is not re-evaluated per-request.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.params.Depends"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
@@ -27,5 +31,12 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# The SQLAlchemy async engine (app.db.session.engine) is a module-level singleton whose
+# pooled asyncpg connections are bound to whichever event loop created them. Function-scoped
+# loops (pytest-asyncio's default) cause later tests to recycle a connection under a
+# different, already-closed loop ("Event loop is closed"). Pinning both scopes to the
+# session keeps one loop for the whole run.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
