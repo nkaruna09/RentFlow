@@ -37,6 +37,11 @@ class AuthorizationError(RentFlowError):
         super().__init__(detail=detail, status_code=403)
 
 
+class ConflictError(RentFlowError):
+    def __init__(self, detail: str = "Resource already exists") -> None:
+        super().__init__(detail=detail, status_code=409)
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Attach exception handlers to the FastAPI application."""
 
@@ -48,7 +53,14 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def handle_validation_error(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
-        return JSONResponse(status_code=422, content={"detail": exc.errors()})
+        field_errors = {
+            ".".join(str(part) for part in error["loc"] if part != "body"): error["msg"]
+            for error in exc.errors()
+        }
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "Validation failed", "field_errors": field_errors},
+        )
 
     @app.exception_handler(StarletteHTTPException)
     async def handle_http_exception(request: Request, exc: StarletteHTTPException) -> JSONResponse:
