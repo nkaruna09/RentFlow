@@ -18,9 +18,7 @@ down_revision = "929d0defcb2d"
 branch_labels = None
 depends_on = None
 
-user_role = postgresql.ENUM(
-    "landlord", "manager", "tenant", name="user_role", create_type=False
-)
+user_role = postgresql.ENUM("landlord", "manager", "tenant", name="user_role", create_type=False)
 
 
 def upgrade() -> None:
