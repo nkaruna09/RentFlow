@@ -25,9 +25,7 @@ async def test_tenant_gets_403_from_landlord_only_endpoint(make_user) -> None:
         return {"user_id": str(current_user.id)}
 
     test_app.dependency_overrides[get_current_user] = lambda: tenant
-    async with AsyncClient(
-        transport=ASGITransport(app=test_app), base_url="http://test"
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as client:
         response = await client.get("/landlord-only")
 
     assert response.status_code == 403
@@ -46,9 +44,7 @@ async def test_landlord_can_use_landlord_only_endpoint(make_user) -> None:
         return {"user_id": str(current_user.id)}
 
     test_app.dependency_overrides[get_current_user] = lambda: landlord
-    async with AsyncClient(
-        transport=ASGITransport(app=test_app), base_url="http://test"
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as client:
         response = await client.get("/landlord-only")
 
     assert response.status_code == 200

@@ -38,7 +38,8 @@ async def test_register_creates_user_without_exposing_password(
 
 
 async def test_register_rejects_duplicate_email(
-    db_session: AsyncSession, make_user,
+    db_session: AsyncSession,
+    make_user,
 ) -> None:
     await make_user(email="duplicate@example.com")
 
@@ -146,9 +147,7 @@ async def test_refresh_rotates_token(db_session: AsyncSession, make_user) -> Non
 async def test_refresh_rejects_access_token() -> None:
     access_token = create_access_token("d004228b-dad7-4c5c-86f1-92e8fef8f772")
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.post(
-            "/api/v1/auth/refresh", json={"refresh_token": access_token}
-        )
+        response = await client.post("/api/v1/auth/refresh", json={"refresh_token": access_token})
 
     assert response.status_code == 401
 
