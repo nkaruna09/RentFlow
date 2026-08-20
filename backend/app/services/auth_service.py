@@ -2,14 +2,29 @@
 
 from __future__ import annotations
 
+import logging
+import uuid
+from datetime import UTC, datetime
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ConflictError
-from app.core.security import hash_password
+from app.core.exceptions import AuthenticationError, ConflictError
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    hash_password,
+    is_token_revoked,
+    revoke_token,
+    verify_password,
+)
 from app.models.user import User
+from app.schemas.token import TokenPair
 from app.schemas.user import UserCreate
+
+logger = logging.getLogger(__name__)
 
 
 async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
@@ -40,4 +55,57 @@ async def create_user(db: AsyncSession, user_in: UserCreate) -> User:
     return user
 
 
-__all__ = ["create_user"]
+def _issue_token_pair(user: User) -> TokenPair:
+    subject = str(user.id)
+    return TokenPair(
+        access_token=create_access_token(subject),
+        refresh_token=create_refresh_token(subject),
+    )
+
+
+async def authenticate_user(db: AsyncSession, *, email: str, password: str) -> TokenPair:
+    """Verify credentials and return a fresh access/refresh token pair."""
+    user = await db.scalar(select(User).where(User.email == email))
+    if user is None or not user.is_active or not verify_password(password, user.hashed_password):
+        logger.warning("Failed login attempt", extra={"context": {"email": email}})
+        raise AuthenticationError("Invalid email or password")
+
+    return _issue_token_pair(user)
+
+
+async def refresh_tokens(db: AsyncSession, refresh_token: str) -> TokenPair:
+    """Rotate a valid refresh token and return a new token pair."""
+    payload = decode_token(refresh_token, expected_type="refresh")
+    subject = payload.get("sub")
+    raw_jti = payload.get("jti")
+    expires_at = payload.get("exp")
+    if (
+        not isinstance(subject, str)
+        or not isinstance(raw_jti, str)
+        or not isinstance(expires_at, int | float)
+    ):
+        raise AuthenticationError("Could not validate refresh token")
+
+    try:
+        user_id = uuid.UUID(subject)
+        jti = uuid.UUID(raw_jti)
+    except ValueError as exc:
+        raise AuthenticationError("Could not validate refresh token") from exc
+
+    if await is_token_revoked(db, jti):
+        raise AuthenticationError("Refresh token has been revoked")
+
+    user = await db.get(User, user_id)
+    if user is None or not user.is_active:
+        raise AuthenticationError("Could not validate refresh token")
+
+    await revoke_token(
+        db,
+        jti=jti,
+        user_id=user.id,
+        expires_at=datetime.fromtimestamp(expires_at, tz=UTC),
+    )
+    return _issue_token_pair(user)
+
+
+__all__ = ["authenticate_user", "create_user", "refresh_tokens"]
