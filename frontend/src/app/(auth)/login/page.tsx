@@ -16,7 +16,8 @@ export default function LoginPage() {
     const data = new FormData(event.currentTarget);
     try {
       await login({ email: String(data.get("email")), password: String(data.get("password")) });
-      router.replace("/");
+      const requestedPath = new URL(window.location.href).searchParams.get("next");
+      router.replace(requestedPath?.startsWith("/") && !requestedPath.startsWith("//") ? requestedPath : "/");
     } catch (caught) {
       setError(caught instanceof ApiError && caught.status === 401 ? "Invalid email or password." : caught instanceof Error ? caught.message : "Unable to log in.");
     } finally { setSubmitting(false); }

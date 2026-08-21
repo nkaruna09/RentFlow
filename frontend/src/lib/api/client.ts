@@ -2,7 +2,7 @@
 import type { ApiErrorBody } from "@/types/api";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1").replace(/\/$/, "");
-export type AccessTokenProvider = () => string | null;
+export type AccessTokenProvider = () => string | null | Promise<string | null>;
 let accessTokenProvider: AccessTokenProvider | undefined;
 export function setAccessTokenProvider(provider: AccessTokenProvider): void { accessTokenProvider = provider; }
 
@@ -30,7 +30,8 @@ function isErrorBody(value: unknown): value is ApiErrorBody {
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  const token = accessTokenProvider?.() ?? storedAccessToken();
+  const providedToken = headers.has("Authorization") ? null : await accessTokenProvider?.();
+  const token = providedToken ?? storedAccessToken();
   headers.set("Accept", "application/json");
   if (init.body != null && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (token && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
