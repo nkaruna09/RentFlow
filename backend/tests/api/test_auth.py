@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import uuid
+from datetime import UTC, datetime, timedelta
+
 from httpx import ASGITransport, AsyncClient
+from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.security import create_access_token, create_refresh_token, decode_token
 from app.db.session import get_db
 from app.main import app
@@ -152,6 +157,38 @@ async def test_refresh_rejects_access_token() -> None:
     assert response.status_code == 401
 
 
+async def test_refresh_rejects_expired_refresh_token() -> None:
+    settings = get_settings()
+    now = datetime.now(UTC)
+    expired_refresh_token = jwt.encode(
+        {
+            "sub": str(uuid.uuid4()),
+            "type": "refresh",
+            "jti": str(uuid.uuid4()),
+            "iat": now - timedelta(days=2),
+            "exp": now - timedelta(days=1),
+        },
+        settings.secret_key,
+        algorithm=settings.algorithm,
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/auth/refresh", json={"refresh_token": expired_refresh_token}
+        )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Token has expired"}
+
+
+async def test_refresh_rejects_invalid_refresh_token() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/v1/auth/refresh", json={"refresh_token": "not-a-jwt"})
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Could not validate token"}
+
+
 async def test_logout_revokes_refresh_token(db_session: AsyncSession, make_user) -> None:
     user = await make_user()
     refresh_token = create_refresh_token(str(user.id))
@@ -203,3 +240,37 @@ async def test_me_rejects_missing_access_token() -> None:
         response = await client.get("/api/v1/auth/me")
 
     assert response.status_code == 401
+
+
+async def test_me_rejects_expired_access_token() -> None:
+    settings = get_settings()
+    now = datetime.now(UTC)
+    expired_access_token = jwt.encode(
+        {
+            "sub": str(uuid.uuid4()),
+            "type": "access",
+            "jti": str(uuid.uuid4()),
+            "iat": now - timedelta(minutes=10),
+            "exp": now - timedelta(minutes=1),
+        },
+        settings.secret_key,
+        algorithm=settings.algorithm,
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/v1/auth/me", headers={"Authorization": f"Bearer {expired_access_token}"}
+        )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Token has expired"}
+
+
+async def test_me_rejects_invalid_access_token() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(
+            "/api/v1/auth/me", headers={"Authorization": "Bearer not-a-jwt"}
+        )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Could not validate token"}
