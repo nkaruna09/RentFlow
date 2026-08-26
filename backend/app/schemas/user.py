@@ -14,7 +14,7 @@ class UserCreate(BaseModel):
     """Fields accepted when registering a user."""
 
     email: EmailStr
-    password: str = Field(min_length=8)
+    password: str = Field(min_length=8, max_length=72)
     full_name: str = Field(min_length=1)
     role: UserRole = UserRole.LANDLORD
 
@@ -23,7 +23,7 @@ class UserUpdate(BaseModel):
     """Fields accepted when updating a user."""
 
     email: EmailStr | None = None
-    password: str | None = Field(default=None, min_length=8)
+    password: str | None = Field(default=None, min_length=8, max_length=72)
     full_name: str | None = Field(default=None, min_length=1)
     role: UserRole | None = None
     is_active: bool | None = None

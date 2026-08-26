@@ -12,10 +12,10 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
+import bcrypt
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jose import ExpiredSignatureError, JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,8 +27,6 @@ from app.models.user import User
 
 settings = get_settings()
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 TokenType = Literal["access", "refresh"]
@@ -36,12 +34,12 @@ TokenType = Literal["access", "refresh"]
 
 def hash_password(password: str) -> str:
     """Hash a plaintext password for storage."""
-    return str(_pwd_context.hash(password))
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Check a plaintext password against a stored hash."""
-    return bool(_pwd_context.verify(plain_password, hashed_password))
+    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
 
 def _create_token(subject: str, token_type: TokenType, expires_delta: timedelta) -> str:
