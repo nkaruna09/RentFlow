@@ -14,6 +14,14 @@ from app.models.property import Property
 from app.models.tenant import Tenant
 from app.models.unit import Unit
 from app.models.user import UserRole
+from app.repositories.base import BaseRepository
+
+
+class TenantRepository(BaseRepository[Tenant]):
+    model = Tenant
+
+
+tenant_repository = TenantRepository()
 
 
 def _visible_tenants(user_id: uuid.UUID, role: UserRole) -> Select[tuple[Tenant]]:
@@ -55,24 +63,15 @@ async def get_visible(
 
 
 async def create(db: AsyncSession, values: dict[str, object]) -> Tenant:
-    tenant = Tenant(**values)
-    db.add(tenant)
-    await db.commit()
-    await db.refresh(tenant)
-    return tenant
+    return await tenant_repository.create(db, values)
 
 
 async def update(db: AsyncSession, tenant: Tenant, values: dict[str, object]) -> Tenant:
-    for field, value in values.items():
-        setattr(tenant, field, value)
-    await db.commit()
-    await db.refresh(tenant)
-    return tenant
+    return await tenant_repository.update(db, tenant, values)
 
 
 async def delete(db: AsyncSession, tenant: Tenant) -> None:
-    await db.delete(tenant)
-    await db.commit()
+    await tenant_repository.delete(db, tenant)
 
 
 async def has_leases(db: AsyncSession, tenant_id: uuid.UUID) -> bool:

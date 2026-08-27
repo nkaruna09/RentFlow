@@ -10,6 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.property import Property
 from app.models.unit import Unit
+from app.repositories.base import BaseRepository
+
+
+class PropertyRepository(BaseRepository[Property]):
+    model = Property
+
+
+property_repository = PropertyRepository()
 
 
 async def list_for_owner(
@@ -35,24 +43,15 @@ async def get_for_owner(
 
 
 async def create(db: AsyncSession, *, owner_id: uuid.UUID, values: dict[str, object]) -> Property:
-    property_ = Property(owner_id=owner_id, **values)
-    db.add(property_)
-    await db.commit()
-    await db.refresh(property_)
-    return property_
+    return await property_repository.create(db, {"owner_id": owner_id, **values})
 
 
 async def update(db: AsyncSession, property_: Property, values: dict[str, object]) -> Property:
-    for field, value in values.items():
-        setattr(property_, field, value)
-    await db.commit()
-    await db.refresh(property_)
-    return property_
+    return await property_repository.update(db, property_, values)
 
 
 async def delete(db: AsyncSession, property_: Property) -> None:
-    await db.delete(property_)
-    await db.commit()
+    await property_repository.delete(db, property_)
 
 
 async def list_units(

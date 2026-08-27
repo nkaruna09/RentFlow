@@ -11,6 +11,14 @@ from sqlalchemy.sql import Select
 
 from app.models.property import Property
 from app.models.unit import Unit, UnitStatus
+from app.repositories.base import BaseRepository
+
+
+class UnitRepository(BaseRepository[Unit]):
+    model = Unit
+
+
+unit_repository = UnitRepository()
 
 
 def _owned_units(owner_id: uuid.UUID) -> Select[tuple[Unit]]:
@@ -63,21 +71,12 @@ async def label_exists(
 
 
 async def create(db: AsyncSession, values: dict[str, object]) -> Unit:
-    unit = Unit(**values)
-    db.add(unit)
-    await db.commit()
-    await db.refresh(unit)
-    return unit
+    return await unit_repository.create(db, values)
 
 
 async def update(db: AsyncSession, unit: Unit, values: dict[str, object]) -> Unit:
-    for field, value in values.items():
-        setattr(unit, field, value)
-    await db.commit()
-    await db.refresh(unit)
-    return unit
+    return await unit_repository.update(db, unit, values)
 
 
 async def delete(db: AsyncSession, unit: Unit) -> None:
-    await db.delete(unit)
-    await db.commit()
+    await unit_repository.delete(db, unit)
