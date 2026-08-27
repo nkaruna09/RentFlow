@@ -1,8 +1,6 @@
 ﻿/* Tailwind directives + CSS custom properties for the design tokens. */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   color-scheme: light;
