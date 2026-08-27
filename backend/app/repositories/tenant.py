@@ -88,8 +88,19 @@ async def list_leases(
     page: int,
     page_size: int,
 ) -> tuple[list[Lease], int]:
-    visible_tenant = _visible_tenants(user_id, role).where(Tenant.id == tenant_id).subquery()
-    scope = select(Lease).where(Lease.tenant_id == visible_tenant.c.id)
+    if role == UserRole.TENANT:
+        scope = (
+            select(Lease)
+            .join(Tenant, Lease.tenant_id == Tenant.id)
+            .where(Lease.tenant_id == tenant_id, Tenant.user_id == user_id)
+        )
+    else:
+        scope = (
+            select(Lease)
+            .join(Unit, Lease.unit_id == Unit.id)
+            .join(Property, Unit.property_id == Property.id)
+            .where(Lease.tenant_id == tenant_id, Property.owner_id == user_id)
+        )
     total = int(await db.scalar(select(func.count()).select_from(scope.subquery())) or 0)
     result = await db.scalars(
         scope.order_by(Lease.start_date.desc()).offset((page - 1) * page_size).limit(page_size)
