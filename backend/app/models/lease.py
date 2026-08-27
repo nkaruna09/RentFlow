@@ -34,7 +34,7 @@ class Lease(Base):
         Index("ix_leases_status", "status"),
         ExcludeConstraint(  # type: ignore[no-untyped-call]
             ("unit_id", "="),
-            (func.daterange("start_date", "end_date", "[)"), "&&"),
+            (text("daterange(start_date, end_date, '[)')"), "&&"),
             name="exclude_overlapping_active_leases",
             where=text("status = 'active'"),
             using="gist",

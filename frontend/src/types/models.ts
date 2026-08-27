@@ -22,8 +22,8 @@ export interface Unit {
   id: string;
   property_id: string;
   label: string;
-  bedrooms: number;
-  bathrooms: number;
+  bedrooms: string;
+  bathrooms: string;
   square_feet: number | null;
   market_rent: string;
   status: UnitStatus;
