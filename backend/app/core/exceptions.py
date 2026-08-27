@@ -11,9 +11,10 @@ from starlette.responses import JSONResponse
 class RentFlowError(Exception):
     """Base exception for API-domain failures."""
 
-    def __init__(self, detail: str, status_code: int = 500) -> None:
+    def __init__(self, detail: str, status_code: int = 500, code: str | None = None) -> None:
         self.detail = detail
         self.status_code = status_code
+        self.code = code
         super().__init__(detail)
 
 
@@ -38,8 +39,8 @@ class AuthorizationError(RentFlowError):
 
 
 class ConflictError(RentFlowError):
-    def __init__(self, detail: str = "Resource already exists") -> None:
-        super().__init__(detail=detail, status_code=409)
+    def __init__(self, detail: str = "Resource already exists", code: str | None = None) -> None:
+        super().__init__(detail=detail, status_code=409, code=code)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -47,7 +48,10 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RentFlowError)
     async def handle_rentflow_error(request: Request, exc: RentFlowError) -> JSONResponse:
-        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+        content = {"detail": exc.detail}
+        if exc.code is not None:
+            content["code"] = exc.code
+        return JSONResponse(status_code=exc.status_code, content=content)
 
     @app.exception_handler(RequestValidationError)
     async def handle_validation_error(
