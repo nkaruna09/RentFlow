@@ -1,4 +1,4 @@
-"""Pydantic response schemas for units."""
+"""Pydantic request and response schemas for units."""
 
 from __future__ import annotations
 
@@ -9,6 +9,25 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
 
 from app.models.unit import UnitStatus
+
+
+class UnitCreate(BaseModel):
+    property_id: uuid.UUID
+    label: str
+    bedrooms: Decimal
+    bathrooms: Decimal
+    square_feet: int | None = None
+    market_rent: Decimal
+    status: UnitStatus
+
+
+class UnitUpdate(BaseModel):
+    label: str | None = None
+    bedrooms: Decimal | None = None
+    bathrooms: Decimal | None = None
+    square_feet: int | None = None
+    market_rent: Decimal | None = None
+    status: UnitStatus | None = None
 
 
 class UnitRead(BaseModel):
@@ -33,4 +52,4 @@ class UnitList(BaseModel):
     page_size: int
 
 
-__all__ = ["UnitList", "UnitRead"]
+__all__ = ["UnitCreate", "UnitList", "UnitRead", "UnitUpdate"]
