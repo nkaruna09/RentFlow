@@ -1,10 +1,11 @@
 # Developer shortcuts. TODO: verify each target once the services run.
 
-.PHONY: help up down logs migrate revision seed lint test fmt
+.PHONY: help up down reset logs migrate revision seed lint test fmt
 
 help:
 	@echo "up        start the local stack"
-	@echo "down      stop the stack and remove the db volume"
+	@echo "down      stop the stack (keeps accounts and local data)"
+	@echo "reset     stop the stack and permanently delete local data"
 	@echo "logs      tail all service logs"
 	@echo "migrate   apply database migrations"
 	@echo "revision  autogenerate a migration (m=\"message\")"
@@ -17,6 +18,9 @@ up:
 	docker compose up --build
 
 down:
+	docker compose down
+
+reset:
 	docker compose down -v
 
 logs:
