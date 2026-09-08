@@ -15,7 +15,10 @@ export default function LoginPage() {
     event.preventDefault(); setError(""); setSubmitting(true);
     const data = new FormData(event.currentTarget);
     try {
-      await login({ email: String(data.get("email")), password: String(data.get("password")) });
+      await login({
+        email: String(data.get("email")).trim(),
+        password: String(data.get("password")),
+      });
       const requestedPath = new URL(window.location.href).searchParams.get("next");
       router.replace(requestedPath?.startsWith("/") && !requestedPath.startsWith("//") ? requestedPath : "/");
     } catch (caught) {
