@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { summarizeLeaseHistory } from "./page";
+import { summarizeLeaseHistory } from "@/lib/dashboard";
 
 describe("tenant lease history", () => {
   it("summarizes active lease details for the selected tenant", () => {

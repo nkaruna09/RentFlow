@@ -12,42 +12,10 @@ import {
   listTenants,
   updateTenant,
 } from "@/lib/api/tenants";
+import { summarizeLeaseHistory } from "@/lib/dashboard";
 import type { Lease, Tenant } from "@/types/api";
 
 const PAGE_SIZE = 10;
-
-type LeaseHistoryRecord = {
-  status?: string;
-  start_date?: string;
-  end_date?: string;
-  rent_amount?: string;
-};
-
-export function summarizeLeaseHistory(leases: LeaseHistoryRecord[]): string {
-  if (!leases.length) {
-    return "No lease history on record.";
-  }
-
-  const sorted = [...leases].sort(
-    (left, right) =>
-      new Date(right.start_date ?? "1970-01-01").getTime() -
-      new Date(left.start_date ?? "1970-01-01").getTime(),
-  );
-
-  const latest = sorted[0];
-  if (!latest) {
-    return "No lease history on record.";
-  }
-
-  const status = latest.status
-    ? latest.status.charAt(0).toUpperCase() + latest.status.slice(1)
-    : "Unknown";
-  const rent = latest.rent_amount
-    ? `$${Number(latest.rent_amount).toFixed(2)}`
-    : "Rent unavailable";
-
-  return `${status} lease · ${latest.start_date ?? "n/a"} to ${latest.end_date ?? "n/a"} · ${rent}`;
-}
 
 function toFormValues(tenant: Tenant): TenantFormValues {
   return {

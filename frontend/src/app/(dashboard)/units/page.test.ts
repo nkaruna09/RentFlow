@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { filterUnits } from "./page";
+import { filterUnits } from "@/lib/dashboard";
 
 describe("unit filters", () => {
   it("combines property and status filters", () => {

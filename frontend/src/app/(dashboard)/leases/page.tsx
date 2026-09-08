@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/leases";
 import { listTenants } from "@/lib/api/tenants";
 import { listUnits } from "@/lib/api/units";
+import { listAllPages, MAX_API_PAGE_SIZE } from "@/lib/dashboard";
 import type { Lease, LeaseStatus, Tenant, Unit } from "@/types/api";
 
 const PAGE_SIZE = 10;
@@ -61,13 +62,13 @@ export default function LeasesPage() {
   );
 
   const loadReferenceData = useCallback(async () => {
-    const [unitResponse, tenantResponse] = await Promise.all([
-      listUnits({ page: 1, page_size: 500 }),
-      listTenants({ page: 1, page_size: 500 }),
+    const [allUnits, allTenants] = await Promise.all([
+      listAllPages<Unit>((page) => listUnits({ page, page_size: MAX_API_PAGE_SIZE })),
+      listAllPages<Tenant>((page) => listTenants({ page, page_size: MAX_API_PAGE_SIZE })),
     ]);
 
-    setUnits(unitResponse.items);
-    setTenants(tenantResponse.items);
+    setUnits(allUnits);
+    setTenants(allTenants);
   }, []);
 
   const loadLeases = useCallback(async (nextPage: number) => {

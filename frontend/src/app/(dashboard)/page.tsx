@@ -4,24 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { listLeases } from "@/lib/api/leases";
 import { listUnits } from "@/lib/api/units";
+import { computeOverviewStats, listAllPages, MAX_API_PAGE_SIZE } from "@/lib/dashboard";
 import type { Lease, Unit } from "@/types/api";
-
-export function computeOverviewStats(
-  units: Pick<Unit, "status">[],
-  leases: Pick<Lease, "status">[],
-) {
-  const totalUnits = units.length;
-  const vacantUnits = units.filter((unit) => unit.status === "vacant").length;
-  const activeLeaseCount = leases.filter((lease) => lease.status === "active").length;
-  const occupancyPercentage = totalUnits === 0 ? 0 : Math.round(((totalUnits - vacantUnits) / totalUnits) * 100);
-
-  return {
-    totalUnits,
-    vacantUnits,
-    activeLeaseCount,
-    occupancyPercentage,
-  };
-}
 
 export default function DashboardPage() {
   const [units, setUnits] = useState<Unit[]>([]);
@@ -34,13 +18,13 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const [unitResponse, leaseResponse] = await Promise.all([
-        listUnits({ page: 1, page_size: 500 }),
-        listLeases({ page: 1, page_size: 500 }),
+      const [allUnits, allLeases] = await Promise.all([
+        listAllPages<Unit>((page) => listUnits({ page, page_size: MAX_API_PAGE_SIZE })),
+        listAllPages<Lease>((page) => listLeases({ page, page_size: MAX_API_PAGE_SIZE })),
       ]);
 
-      setUnits(unitResponse.items);
-      setLeases(leaseResponse.items);
+      setUnits(allUnits);
+      setLeases(allLeases);
     } catch (apiError) {
       const message =
         apiError instanceof Error ? apiError.message : "Unable to load dashboard stats.";

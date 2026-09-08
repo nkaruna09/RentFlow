@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Lease, Unit } from "@/types/api";
 
-import { computeOverviewStats } from "./page";
+import { computeOverviewStats } from "@/lib/dashboard";
 
 describe("dashboard overview stats", () => {
   it("computes live occupancy and vacancy metrics from unit and lease state", () => {

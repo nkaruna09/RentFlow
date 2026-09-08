@@ -7,21 +7,10 @@ import { DataTable, type Column, type SortDirection } from "@/components/tables/
 import { Button } from "@/components/ui/button";
 import { listProperties } from "@/lib/api/properties";
 import { createUnit, deleteUnit, listUnits, updateUnit } from "@/lib/api/units";
+import { filterUnits } from "@/lib/dashboard";
 import type { Property, Unit, UnitStatus } from "@/types/api";
 
 const PAGE_SIZE = 10;
-
-export function filterUnits<T extends { property_id: string; status: string }>(
-  rows: T[],
-  propertyId?: string,
-  status?: string,
-): T[] {
-  return rows.filter((row) => {
-    const matchesProperty = !propertyId || row.property_id === propertyId;
-    const matchesStatus = !status || row.status === status;
-    return matchesProperty && matchesStatus;
-  });
-}
 
 function toFormValues(unit: Unit): UnitFormValues {
   return {
@@ -142,7 +131,14 @@ export default function UnitsPage() {
 
     try {
       if (selectedUnit) {
-        const { property_id: _property_id, ...updates } = values;
+        const updates = {
+          label: values.label,
+          bedrooms: values.bedrooms,
+          bathrooms: values.bathrooms,
+          square_feet: values.square_feet,
+          market_rent: values.market_rent,
+          status: values.status,
+        };
         await updateUnit(selectedUnit.id, updates);
       } else {
         await createUnit(values);
