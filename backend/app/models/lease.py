@@ -32,7 +32,7 @@ class Lease(Base):
         Index("ix_leases_unit_id", "unit_id"),
         Index("ix_leases_tenant_id", "tenant_id"),
         Index("ix_leases_status", "status"),
-        ExcludeConstraint(  # type: ignore[no-untyped-call]
+        ExcludeConstraint(
             ("unit_id", "="),
             (text("daterange(start_date, end_date, '[)')"), "&&"),
             name="exclude_overlapping_active_leases",
