@@ -140,6 +140,7 @@ export default function PropertiesPage() {
       setPage(1);
       setSortKey("name");
       setSortDirection("asc");
+      await loadProperties(1);
       handleCloseForm();
     } catch (apiError) {
       const message =
@@ -163,6 +164,7 @@ export default function PropertiesPage() {
         await deleteProperty(property.id);
         const nextPage = properties.length === 1 && page > 1 ? page - 1 : page;
         setPage(nextPage);
+        await loadProperties(nextPage);
       } catch (apiError) {
         const message =
           apiError instanceof Error ? apiError.message : "Unable to delete property.";
@@ -171,7 +173,7 @@ export default function PropertiesPage() {
         setDeletingId(null);
       }
     },
-    [page, properties.length],
+    [loadProperties, page, properties.length],
   );
 
   const displayColumns = useMemo<Column<Property>[]>(

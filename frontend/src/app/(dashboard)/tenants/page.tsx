@@ -117,6 +117,7 @@ export default function TenantsPage() {
       setPage(1);
       setSortKey("full_name");
       setSortDirection("asc");
+      await loadTenants(1);
       handleCloseForm();
     } catch (apiError) {
       const message = apiError instanceof Error ? apiError.message : "Unable to save tenant.";
@@ -139,6 +140,7 @@ export default function TenantsPage() {
         await deleteTenant(tenant.id);
         const nextPage = tenants.length === 1 && page > 1 ? page - 1 : page;
         setPage(nextPage);
+        await loadTenants(nextPage);
         if (selectedTenant?.id === tenant.id) {
           setSelectedTenant(null);
           setLeaseHistory([]);
@@ -150,7 +152,7 @@ export default function TenantsPage() {
         setDeletingId(null);
       }
     },
-    [page, selectedTenant?.id, tenants.length],
+    [loadTenants, page, selectedTenant?.id, tenants.length],
   );
 
   const displayColumns = useMemo<Column<Tenant>[]>(

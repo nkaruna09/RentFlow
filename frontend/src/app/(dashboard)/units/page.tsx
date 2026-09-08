@@ -147,6 +147,7 @@ export default function UnitsPage() {
       setPage(1);
       setSortKey("label");
       setSortDirection("asc");
+      await loadUnits(1);
       handleCloseForm();
     } catch (apiError) {
       const message = apiError instanceof Error ? apiError.message : "Unable to save unit.";
@@ -169,6 +170,7 @@ export default function UnitsPage() {
         await deleteUnit(unit.id);
         const nextPage = units.length === 1 && page > 1 ? page - 1 : page;
         setPage(nextPage);
+        await loadUnits(nextPage);
       } catch (apiError) {
         const message = apiError instanceof Error ? apiError.message : "Unable to delete unit.";
         setError(message);
@@ -176,7 +178,7 @@ export default function UnitsPage() {
         setDeletingId(null);
       }
     },
-    [page, units.length],
+    [loadUnits, page, units.length],
   );
 
   const handleFilterChange = (nextProperty: string, nextStatus: UnitStatus | "all") => {
