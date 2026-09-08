@@ -15,7 +15,10 @@ export default function RegisterPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(""); setFieldErrors({}); setSubmitting(true);
     const data = new FormData(event.currentTarget);
-    const credentials = { email: String(data.get("email")), password: String(data.get("password")) };
+    const credentials = {
+      email: String(data.get("email")).trim(),
+      password: String(data.get("password")),
+    };
     try {
       await register({ ...credentials, full_name: String(data.get("full_name")) });
       await login(credentials);
