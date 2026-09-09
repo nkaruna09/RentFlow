@@ -1,9 +1,18 @@
 """Money and billing boundary-condition tests."""
 
+from datetime import date
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.lease import Lease, LeaseStatus
+from app.models.property import Property, PropertyType
+from app.models.tenant import Tenant
+from app.models.unit import Unit, UnitStatus
+from app.services.billing_service import build_invoice, generate_invoice
+from app.utils.dates import lease_billing_periods
 from app.utils.money import format_money, prorate_money, round_money, split_money
 
 
@@ -46,3 +55,115 @@ def test_format_money_is_deterministic_and_cent_precise() -> None:
 def test_money_helpers_reject_float_inputs() -> None:
     with pytest.raises(TypeError):
         round_money(10.005)  # type: ignore[arg-type]
+
+
+def _lease(*, start: date, end: date, status: LeaseStatus = LeaseStatus.ACTIVE) -> Lease:
+    return Lease(
+        id=uuid4(),
+        unit_id=uuid4(),
+        tenant_id=uuid4(),
+        start_date=start,
+        end_date=end,
+        rent_amount=Decimal("1000.00"),
+        deposit_amount=Decimal("1000.00"),
+        billing_day=1,
+        status=status,
+    )
+
+
+def test_lease_starting_on_the_first_gets_full_monthly_periods() -> None:
+    lease = _lease(start=date(2026, 1, 1), end=date(2026, 4, 1))
+
+    periods = lease_billing_periods(lease.start_date, lease.end_date, lease.billing_day)
+
+    assert [(period.period_start, period.period_end) for period in periods] == [
+        (date(2026, 1, 1), date(2026, 2, 1)),
+        (date(2026, 2, 1), date(2026, 3, 1)),
+        (date(2026, 3, 1), date(2026, 4, 1)),
+    ]
+    assert [build_invoice(lease, period).amount_due for period in periods] == [
+        Decimal("1000.00"),
+        Decimal("1000.00"),
+        Decimal("1000.00"),
+    ]
+
+
+def test_mid_month_lease_start_prorates_first_invoice() -> None:
+    lease = _lease(start=date(2026, 1, 15), end=date(2026, 3, 1))
+
+    periods = lease_billing_periods(lease.start_date, lease.end_date, lease.billing_day)
+
+    first = build_invoice(lease, periods[0])
+    assert (first.period_start, first.period_end) == (date(2026, 1, 15), date(2026, 2, 1))
+    assert first.amount_due == Decimal("548.39")  # 17 of January's 31 days
+
+
+def test_lease_starting_on_last_day_prorates_one_day() -> None:
+    lease = _lease(start=date(2026, 1, 31), end=date(2026, 3, 1))
+
+    periods = lease_billing_periods(lease.start_date, lease.end_date, lease.billing_day)
+
+    first = build_invoice(lease, periods[0])
+    assert (first.period_start, first.period_end) == (date(2026, 1, 31), date(2026, 2, 1))
+    assert first.amount_due == Decimal("32.26")
+
+
+def test_terminated_mid_period_prorates_last_invoice() -> None:
+    lease = _lease(
+        start=date(2026, 1, 1),
+        end=date(2026, 1, 15),
+        status=LeaseStatus.TERMINATED,
+    )
+
+    periods = lease_billing_periods(lease.start_date, lease.end_date, lease.billing_day)
+
+    invoice = build_invoice(lease, periods[0])
+    assert (invoice.period_start, invoice.period_end) == (date(2026, 1, 1), date(2026, 1, 15))
+    assert invoice.amount_due == Decimal("451.61")  # 14 of January's 31 days
+
+
+async def test_generate_invoice_persists_and_is_idempotent(
+    db_session: AsyncSession, make_user
+) -> None:
+    owner = await make_user()
+    property_ = Property(
+        owner_id=owner.id,
+        name="Billing property",
+        address_line1="1 Main Street",
+        city="Toronto",
+        region="ON",
+        postal_code="M1M 1M1",
+        country="Canada",
+        property_type=PropertyType.SINGLE_FAMILY,
+    )
+    unit = Unit(
+        property=property_,
+        label="Unit 1",
+        bedrooms=1,
+        bathrooms=1,
+        market_rent=Decimal("1000.00"),
+        status=UnitStatus.OCCUPIED,
+    )
+    tenant = Tenant(
+        full_name="Billing Tenant",
+        email="billing-service@example.com",
+        phone="555-0100",
+    )
+    lease = Lease(
+        unit=unit,
+        tenant=tenant,
+        start_date=date(2026, 1, 15),
+        end_date=date(2026, 3, 1),
+        rent_amount=Decimal("1000.00"),
+        deposit_amount=Decimal("1000.00"),
+        billing_day=1,
+        status=LeaseStatus.ACTIVE,
+    )
+    db_session.add_all([property_, unit, tenant, lease])
+    await db_session.flush()
+
+    generated = await generate_invoice(db_session, lease)
+    repeated = await generate_invoice(db_session, lease)
+
+    assert generated.id == repeated.id
+    assert generated.amount_due == Decimal("548.39")
