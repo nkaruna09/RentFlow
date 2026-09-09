@@ -15,6 +15,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.payment import Invoice
     from app.models.tenant import Tenant
     from app.models.unit import Unit
 
@@ -70,6 +71,7 @@ class Lease(Base):
 
     unit: Mapped[Unit] = relationship(back_populates="leases")
     tenant: Mapped[Tenant] = relationship(back_populates="leases")
+    invoices: Mapped[list[Invoice]] = relationship(back_populates="lease")
 
 
 __all__ = ["Lease", "LeaseStatus"]
