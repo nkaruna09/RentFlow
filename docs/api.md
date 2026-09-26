@@ -95,7 +95,11 @@ Base URL: `/api/v1`. Interactive docs are served at `/docs` (Swagger) and `/redo
 | POST | `/payments/invoices` | Create an ad-hoc invoice |
 | GET | `/payments/invoices/{id}` | Retrieve |
 | POST | `/payments/invoices/{id}/payments` | Record a payment against an invoice |
-| GET | `/payments/arrears` | Outstanding balances across all leases |
+| GET | `/payments/arrears` | Outstanding balances across all leases owned by the caller |
+
+Invoice and payment writes are available to landlords and managers. Payment
+amounts must be positive and cannot exceed the invoice's outstanding balance.
+Arrears are grouped by lease and include a portfolio-wide outstanding total.
 
 ## Maintenance — `/maintenance`
 

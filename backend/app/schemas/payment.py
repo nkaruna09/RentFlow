@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.payment import InvoiceStatus, PaymentMethod
 
@@ -17,7 +17,7 @@ class InvoiceCreate(BaseModel):
     lease_id: uuid.UUID
     period_start: date
     period_end: date
-    amount_due: Decimal
+    amount_due: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     due_date: date
     status: InvoiceStatus = InvoiceStatus.OPEN
 
@@ -53,8 +53,7 @@ class InvoiceList(BaseModel):
 class PaymentCreate(BaseModel):
     """Fields accepted when recording a payment."""
 
-    invoice_id: uuid.UUID
-    amount: Decimal
+    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     paid_at: datetime
     method: PaymentMethod
     reference: str | None = None
@@ -66,8 +65,26 @@ class PaymentRead(PaymentCreate):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    invoice_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+
+
+class ArrearsItem(BaseModel):
+    """Outstanding balance aggregated for one lease."""
+
+    lease_id: uuid.UUID
+    outstanding_balance: Decimal
+
+
+class ArrearsList(BaseModel):
+    """Owner-scoped arrears totals, paginated by lease."""
+
+    items: list[ArrearsItem]
+    total: int
+    outstanding_total: Decimal
+    page: int
+    page_size: int
 
 
 class PaymentList(BaseModel):
@@ -78,6 +95,8 @@ class PaymentList(BaseModel):
 
 
 __all__ = [
+    "ArrearsItem",
+    "ArrearsList",
     "InvoiceCreate",
     "InvoiceList",
     "InvoiceRead",
