@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { PaymentForm } from "@/components/forms/payment-form";
 import {
   DataTable,
   type Column,
@@ -10,11 +11,20 @@ import {
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listLeases } from "@/lib/api/leases";
-import { listInvoices } from "@/lib/api/payments";
+import { listArrears, listInvoices, recordPayment } from "@/lib/api/payments";
+import { listTenants } from "@/lib/api/tenants";
 import { listAllPages, MAX_API_PAGE_SIZE } from "@/lib/dashboard";
-import type { Invoice, InvoiceStatus, Lease } from "@/types/api";
+import type {
+  ArrearsItem,
+  Invoice,
+  InvoiceStatus,
+  Lease,
+  PaymentCreate,
+  Tenant,
+} from "@/types/api";
 
 const PAGE_SIZE = 10;
+const ARREARS_PAGE_SIZE = 100;
 
 const statusOptions: Array<{ value: InvoiceStatus | "all"; label: string }> = [
   { value: "all", label: "All statuses" },
@@ -61,7 +71,10 @@ function leaseLabel(lease: Lease): string {
 
 export default function PaymentsPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [arrears, setArrears] = useState<ArrearsItem[]>([]);
+  const [outstandingTotal, setOutstandingTotal] = useState("0.00");
   const [leases, setLeases] = useState<Lease[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [leaseFilter, setLeaseFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | "all">(
     "all",
@@ -69,7 +82,11 @@ export default function PaymentsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [arrearsLoading, setArrearsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentSaving, setPaymentSaving] = useState(false);
   const [sortKey, setSortKey] = useState<string | null>("due_date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
@@ -77,19 +94,61 @@ export default function PaymentsPage() {
     () => Object.fromEntries(leases.map((lease) => [lease.id, lease])),
     [leases],
   );
+  const tenantById = useMemo(
+    () => Object.fromEntries(tenants.map((tenant) => [tenant.id, tenant])),
+    [tenants],
+  );
 
-  const loadLeases = useCallback(async () => {
+  const loadReferenceData = useCallback(async () => {
     try {
-      const allLeases = await listAllPages<Lease>((nextPage) =>
-        listLeases({ page: nextPage, page_size: MAX_API_PAGE_SIZE }),
-      );
+      const [allLeases, allTenants] = await Promise.all([
+        listAllPages<Lease>((nextPage) =>
+          listLeases({ page: nextPage, page_size: MAX_API_PAGE_SIZE }),
+        ),
+        listAllPages<Tenant>((nextPage) =>
+          listTenants({ page: nextPage, page_size: MAX_API_PAGE_SIZE }),
+        ),
+      ]);
       setLeases(allLeases);
+      setTenants(allTenants);
     } catch (apiError) {
       const message =
         apiError instanceof Error
           ? apiError.message
-          : "Unable to load lease filters.";
+          : "Unable to load billing references.";
       setError(message);
+    }
+  }, []);
+
+  const loadArrears = useCallback(async () => {
+    setArrearsLoading(true);
+
+    try {
+      const firstPage = await listArrears({
+        page: 1,
+        page_size: ARREARS_PAGE_SIZE,
+      });
+      const allItems = [...firstPage.items];
+      const pageCount = Math.ceil(firstPage.total / ARREARS_PAGE_SIZE);
+
+      for (let nextPage = 2; nextPage <= pageCount; nextPage += 1) {
+        const response = await listArrears({
+          page: nextPage,
+          page_size: ARREARS_PAGE_SIZE,
+        });
+        allItems.push(...response.items);
+      }
+
+      setArrears(allItems);
+      setOutstandingTotal(firstPage.outstanding_total);
+    } catch (apiError) {
+      const message =
+        apiError instanceof Error
+          ? apiError.message
+          : "Unable to load arrears.";
+      setError(message);
+    } finally {
+      setArrearsLoading(false);
     }
   }, []);
 
@@ -121,8 +180,9 @@ export default function PaymentsPage() {
   );
 
   useEffect(() => {
-    void loadLeases();
-  }, [loadLeases]);
+    void loadReferenceData();
+    void loadArrears();
+  }, [loadArrears, loadReferenceData]);
 
   useEffect(() => {
     void loadInvoices(page);
@@ -135,6 +195,38 @@ export default function PaymentsPage() {
     setLeaseFilter(nextLease);
     setStatusFilter(nextStatus);
     setPage(1);
+  };
+
+  const startPayment = useCallback((invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setPaymentError(null);
+  }, []);
+
+  const closePayment = useCallback(() => {
+    setSelectedInvoice(null);
+    setPaymentError(null);
+  }, []);
+
+  const handleRecordPayment = async (values: PaymentCreate) => {
+    if (!selectedInvoice) return;
+
+    setPaymentSaving(true);
+    setPaymentError(null);
+
+    try {
+      await recordPayment(selectedInvoice.id, values);
+      setPage(1);
+      await Promise.all([loadInvoices(1), loadArrears()]);
+      closePayment();
+    } catch (apiError) {
+      const message =
+        apiError instanceof Error
+          ? apiError.message
+          : "Unable to record payment.";
+      setPaymentError(message);
+    } finally {
+      setPaymentSaving(false);
+    }
   };
 
   const columns = useMemo<Column<Invoice>[]>(
@@ -208,8 +300,75 @@ export default function PaymentsPage() {
           </Badge>
         ),
       },
+      {
+        key: "actions",
+        header: "Actions",
+        sortable: false,
+        render: (invoice) =>
+          invoice.status === "paid" || invoice.status === "void" ? (
+            <span className="text-xs text-slate-400">No payment due</span>
+          ) : (
+            <button
+              type="button"
+              className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-100"
+              onClick={() => startPayment(invoice)}
+            >
+              Record payment
+            </button>
+          ),
+      },
     ],
-    [leaseById],
+    [leaseById, startPayment],
+  );
+
+  const arrearsColumns = useMemo<Column<ArrearsItem>[]>(
+    () => [
+      {
+        key: "tenant",
+        header: "Tenant",
+        sortable: true,
+        accessor: (item) => {
+          const lease = leaseById[item.lease_id];
+          return lease ? tenantById[lease.tenant_id]?.full_name : "";
+        },
+        render: (item) => {
+          const lease = leaseById[item.lease_id];
+          return (
+            <span className="font-medium text-slate-900">
+              {lease
+                ? (tenantById[lease.tenant_id]?.full_name ?? "Unknown tenant")
+                : "Unknown tenant"}
+            </span>
+          );
+        },
+      },
+      {
+        key: "lease_id",
+        header: "Lease",
+        sortable: true,
+        accessor: (item) => item.lease_id,
+        render: (item) => {
+          const lease = leaseById[item.lease_id];
+          return (
+            <span>
+              {lease ? leaseLabel(lease) : `Lease ${shortId(item.lease_id)}`}
+            </span>
+          );
+        },
+      },
+      {
+        key: "outstanding_balance",
+        header: "Outstanding",
+        sortable: true,
+        accessor: (item) => Number(item.outstanding_balance),
+        render: (item) => (
+          <span className="font-semibold text-rose-700">
+            {formatMoney(item.outstanding_balance)}
+          </span>
+        ),
+      },
+    ],
+    [leaseById, tenantById],
   );
 
   return (
@@ -293,6 +452,16 @@ export default function PaymentsPage() {
         </div>
       ) : null}
 
+      {selectedInvoice ? (
+        <PaymentForm
+          invoice={selectedInvoice}
+          isSaving={paymentSaving}
+          error={paymentError}
+          onSubmit={handleRecordPayment}
+          onCancel={closePayment}
+        />
+      ) : null}
+
       <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-200/50 sm:p-6">
         <div className="mb-4">
           <h2 className="font-semibold text-slate-900">Invoices</h2>
@@ -322,6 +491,40 @@ export default function PaymentsPage() {
               setSortKey(key);
               setSortDirection(direction);
             }}
+          />
+        )}
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-200/50 sm:p-6">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-slate-900">
+              Arrears by tenant and lease
+            </h2>
+            <p className="text-sm text-slate-500">
+              Outstanding balances across all leases in your portfolio.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-rose-50 px-4 py-3 text-right">
+            <div className="text-xs font-semibold uppercase tracking-wide text-rose-600">
+              Total outstanding
+            </div>
+            <div className="mt-0.5 text-2xl font-semibold text-rose-800">
+              {formatMoney(outstandingTotal)}
+            </div>
+          </div>
+        </div>
+
+        {arrearsLoading ? (
+          <div className="flex items-center justify-center py-12 text-sm text-slate-600">
+            Loading arrears...
+          </div>
+        ) : (
+          <DataTable
+            columns={arrearsColumns}
+            data={arrears}
+            rowKey={(item) => item.lease_id}
+            emptyMessage="No outstanding balances."
           />
         )}
       </div>
