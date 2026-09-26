@@ -3,6 +3,9 @@ export type PropertyType =
   "single_family" | "multi_family" | "condo" | "commercial";
 export type UnitStatus = "vacant" | "occupied" | "unavailable";
 export type LeaseStatus = "draft" | "active" | "expired" | "terminated";
+export type InvoiceStatus = "open" | "paid" | "partial" | "overdue" | "void";
+export type PaymentMethod =
+  "bank_transfer" | "card" | "cash" | "check" | "other";
 
 export interface Property {
   id: string;
@@ -50,6 +53,28 @@ export interface Lease {
   deposit_amount: string;
   billing_day: number;
   status: LeaseStatus;
+  created_at: string;
+  updated_at: string;
+}
+export interface Invoice {
+  id: string;
+  lease_id: string;
+  period_start: string;
+  period_end: string;
+  amount_due: string;
+  late_fee_amount: string | null;
+  due_date: string;
+  status: InvoiceStatus;
+  created_at: string;
+  updated_at: string;
+}
+export interface Payment {
+  id: string;
+  invoice_id: string;
+  amount: string;
+  paid_at: string;
+  method: PaymentMethod;
+  reference: string | null;
   created_at: string;
   updated_at: string;
 }
