@@ -68,12 +68,13 @@ Rules:
 - overdue-rent sweep and late-fee application
 - lease-expiry notifications
 
+Recurring work runs as Azure Container Apps scheduled jobs using the backend
+container image. See [ADR 0002](adr/0002-use-container-apps-jobs-for-scheduled-work.md).
+
 Late fees use a flat **$20.00** charge. The overdue sweep applies it beginning the
 day after an unpaid invoice's due date. The invoice stores the applied fee amount;
 a null value means no fee has been applied, making repeated or concurrent sweeps
 idempotent. Paid and void invoices are never charged.
-
-**TODO:** choose the execution mechanism (Container Apps job, in-process scheduler, or task queue).
 
 ## 6. Cross-cutting concerns
 

@@ -8,7 +8,17 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Index, Numeric, Text, func
+from sqlalchemy import (
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Numeric,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -43,6 +53,12 @@ class Invoice(Base):
 
     __tablename__ = "invoices"
     __table_args__ = (
+        UniqueConstraint(
+            "lease_id",
+            "period_start",
+            "period_end",
+            name="uq_invoices_lease_period",
+        ),
         Index("ix_invoices_lease_id_due_date", "lease_id", "due_date"),
         Index("ix_invoices_status", "status"),
     )

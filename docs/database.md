@@ -84,6 +84,8 @@ documents ── polymorphic metadata for blobs in Azure Storage
 | due_date | date | |
 | status | enum | `open` · `paid` · `partial` · `overdue` · `void` |
 
+> Constraint: one invoice per `(lease_id, period_start, period_end)`.
+
 ### `payments`
 | Column | Type | Notes |
 | --- | --- | --- |

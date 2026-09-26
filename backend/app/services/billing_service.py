@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from typing import cast
 
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.lease import Lease
@@ -44,6 +46,19 @@ def build_invoice(lease: Lease, period: BillingPeriod) -> Invoice:
     )
 
 
+async def _get_invoice(db: AsyncSession, lease: Lease, period: BillingPeriod) -> Invoice | None:
+    return cast(
+        Invoice | None,
+        await db.scalar(
+            select(Invoice).where(
+                Invoice.lease_id == lease.id,
+                Invoice.period_start == period.period_start,
+                Invoice.period_end == period.period_end,
+            )
+        ),
+    )
+
+
 async def generate_invoice(
     db: AsyncSession,
     lease: Lease,
@@ -56,18 +71,22 @@ async def generate_invoice(
     period is supplied, the first period in the lease term is generated.
     """
     period = _find_period(lease, period_start)
-    existing = await db.scalar(
-        select(Invoice).where(
-            Invoice.lease_id == lease.id,
-            Invoice.period_start == period.period_start,
-            Invoice.period_end == period.period_end,
-        )
-    )
+    existing = await _get_invoice(db, lease, period)
     if existing is not None:
         return existing
 
     invoice = build_invoice(lease, period)
-    db.add(invoice)
+    try:
+        async with db.begin_nested():
+            db.add(invoice)
+            await db.flush()
+    except IntegrityError:
+        existing = await _get_invoice(db, lease, period)
+        if existing is None:
+            raise
+        await db.commit()
+        return existing
+
     await db.commit()
     await db.refresh(invoice)
     return invoice
