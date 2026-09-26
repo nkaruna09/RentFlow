@@ -8,10 +8,16 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.lease import Lease, LeaseStatus
+from app.models.payment import InvoiceStatus
 from app.models.property import Property, PropertyType
 from app.models.tenant import Tenant
 from app.models.unit import Unit, UnitStatus
-from app.services.billing_service import build_invoice, generate_invoice
+from app.services.billing_service import (
+    LATE_FEE_AMOUNT,
+    apply_late_fees,
+    build_invoice,
+    generate_invoice,
+)
 from app.utils.dates import lease_billing_periods
 from app.utils.money import format_money, prorate_money, round_money, split_money
 
@@ -167,3 +173,53 @@ async def test_generate_invoice_persists_and_is_idempotent(
 
     assert generated.id == repeated.id
     assert generated.amount_due == Decimal("548.39")
+
+
+async def test_late_fee_sweep_applies_fee_only_once(db_session: AsyncSession, make_user) -> None:
+    owner = await make_user()
+    property_ = Property(
+        owner_id=owner.id,
+        name="Late fee property",
+        address_line1="2 Main Street",
+        city="Toronto",
+        region="ON",
+        postal_code="M1M 1M2",
+        country="Canada",
+        property_type=PropertyType.SINGLE_FAMILY,
+    )
+    unit = Unit(
+        property=property_,
+        label="Unit 2",
+        bedrooms=1,
+        bathrooms=1,
+        market_rent=Decimal("1000.00"),
+        status=UnitStatus.OCCUPIED,
+    )
+    tenant = Tenant(
+        full_name="Late Fee Tenant",
+        email="late-fee-service@example.com",
+        phone="555-0101",
+    )
+    lease = Lease(
+        unit=unit,
+        tenant=tenant,
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 2, 1),
+        rent_amount=Decimal("1000.00"),
+        deposit_amount=Decimal("1000.00"),
+        billing_day=1,
+        status=LeaseStatus.ACTIVE,
+    )
+    db_session.add_all([property_, unit, tenant, lease])
+    await db_session.flush()
+    invoice = await generate_invoice(db_session, lease)
+
+    first_sweep = await apply_late_fees(db_session, as_of=date(2026, 1, 2))
+    second_sweep = await apply_late_fees(db_session, as_of=date(2026, 1, 2))
+    await db_session.refresh(invoice)
+
+    assert [charged.id for charged in first_sweep] == [invoice.id]
+    assert second_sweep == []
+    assert invoice.amount_due == Decimal("1020.00")
+    assert invoice.late_fee_amount == LATE_FEE_AMOUNT
+    assert invoice.status is InvoiceStatus.OVERDUE

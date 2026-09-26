@@ -54,6 +54,7 @@ class Invoice(Base):
     period_start: Mapped[date] = mapped_column(Date, nullable=False)
     period_end: Mapped[date] = mapped_column(Date, nullable=False)
     amount_due: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    late_fee_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     due_date: Mapped[date] = mapped_column(Date, nullable=False)
     status: Mapped[InvoiceStatus] = mapped_column(
         Enum(

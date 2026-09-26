@@ -5,13 +5,16 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.lease import Lease
 from app.models.payment import Invoice, InvoiceStatus
 from app.utils.dates import BillingPeriod, lease_billing_periods
 from app.utils.money import prorate_money
+
+LATE_FEE_AMOUNT = Decimal("20.00")
+_UNPAID_STATUSES = (InvoiceStatus.OPEN, InvoiceStatus.PARTIAL, InvoiceStatus.OVERDUE)
 
 
 def invoice_amount(lease: Lease, period: BillingPeriod) -> Decimal:
@@ -78,11 +81,45 @@ async def generate_invoices(db: AsyncSession, lease: Lease) -> list[Invoice]:
     return invoices
 
 
+async def apply_late_fees(
+    db: AsyncSession,
+    *,
+    as_of: date | None = None,
+) -> list[Invoice]:
+    """Apply the flat late fee to invoices that are overdue and still unpaid.
+
+    An invoice becomes overdue on the day after ``due_date``. ``late_fee_amount``
+    is both an audit value and the persistent idempotency marker, so subsequent
+    sweeps cannot charge the same invoice again. The conditional update also
+    makes concurrent sweep executions safe.
+    """
+    sweep_date = as_of or date.today()
+    result = await db.scalars(
+        update(Invoice)
+        .where(
+            Invoice.due_date < sweep_date,
+            Invoice.status.in_(_UNPAID_STATUSES),
+            Invoice.late_fee_amount.is_(None),
+        )
+        .values(
+            amount_due=Invoice.amount_due + LATE_FEE_AMOUNT,
+            late_fee_amount=LATE_FEE_AMOUNT,
+            status=InvoiceStatus.OVERDUE,
+        )
+        .returning(Invoice)
+    )
+    invoices = list(result)
+    await db.commit()
+    return invoices
+
+
 calculate_invoice_amount = invoice_amount
 generate_lease_invoices = generate_invoices
 
 
 __all__ = [
+    "LATE_FEE_AMOUNT",
+    "apply_late_fees",
     "build_invoice",
     "calculate_invoice_amount",
     "generate_invoice",

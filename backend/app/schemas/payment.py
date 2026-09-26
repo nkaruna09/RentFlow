@@ -38,6 +38,7 @@ class InvoiceRead(InvoiceCreate):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    late_fee_amount: Decimal | None = None
     created_at: datetime
     updated_at: datetime
 

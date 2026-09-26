@@ -80,6 +80,7 @@ documents ── polymorphic metadata for blobs in Azure Storage
 | lease_id | uuid | FK → leases |
 | period_start / period_end | date | |
 | amount_due | numeric(12,2) | |
+| late_fee_amount | numeric(12,2) | nullable; non-null once a late fee is applied |
 | due_date | date | |
 | status | enum | `open` · `paid` · `partial` · `overdue` · `void` |
 

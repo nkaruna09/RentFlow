@@ -68,6 +68,11 @@ Rules:
 - overdue-rent sweep and late-fee application
 - lease-expiry notifications
 
+Late fees use a flat **$20.00** charge. The overdue sweep applies it beginning the
+day after an unpaid invoice's due date. The invoice stores the applied fee amount;
+a null value means no fee has been applied, making repeated or concurrent sweeps
+idempotent. Paid and void invoices are never charged.
+
 **TODO:** choose the execution mechanism (Container Apps job, in-process scheduler, or task queue).
 
 ## 6. Cross-cutting concerns
