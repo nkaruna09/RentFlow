@@ -2,7 +2,11 @@
 import type {
   Lease,
   LeaseStatus,
+  Invoice,
+  InvoiceStatus,
   Paginated,
+  Payment,
+  PaymentMethod,
   Property,
   PropertyType,
   Tenant,
@@ -41,7 +45,11 @@ export interface User {
 export type {
   Lease,
   LeaseStatus,
+  Invoice,
+  InvoiceStatus,
   Paginated,
+  Payment,
+  PaymentMethod,
   Property,
   PropertyType,
   Tenant,
@@ -53,6 +61,7 @@ export type PropertyList = Paginated<Property>;
 export type UnitList = Paginated<Unit>;
 export type TenantList = Paginated<Tenant>;
 export type LeaseList = Paginated<Lease>;
+export type InvoiceList = Paginated<Invoice>;
 export interface PropertyCreate {
   name: string;
   address_line1: string;
@@ -105,4 +114,29 @@ export interface LeaseRenewRequest {
 export interface LeaseTerminateRequest {
   reason: string;
   end_date: string;
+}
+export interface InvoiceCreate {
+  lease_id: string;
+  period_start: string;
+  period_end: string;
+  amount_due: string;
+  due_date: string;
+  status?: InvoiceStatus;
+}
+export interface PaymentCreate {
+  amount: string;
+  paid_at: string;
+  method: PaymentMethod;
+  reference?: string | null;
+}
+export interface ArrearsItem {
+  lease_id: string;
+  outstanding_balance: string;
+}
+export interface ArrearsList {
+  items: ArrearsItem[];
+  total: number;
+  outstanding_total: string;
+  page: number;
+  page_size: number;
 }

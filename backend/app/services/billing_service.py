@@ -1,3 +1,148 @@
-"""Rent invoice generation, late fees, payment reconciliation."""
+"""Rent invoice generation, late fees, and payment reconciliation."""
 
-# TODO: implement
+from __future__ import annotations
+
+from datetime import date
+from decimal import Decimal
+from typing import cast
+
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.lease import Lease
+from app.models.payment import Invoice, InvoiceStatus
+from app.utils.dates import BillingPeriod, lease_billing_periods
+from app.utils.money import prorate_money
+
+LATE_FEE_AMOUNT = Decimal("20.00")
+_UNPAID_STATUSES = (InvoiceStatus.OPEN, InvoiceStatus.PARTIAL, InvoiceStatus.OVERDUE)
+
+
+def invoice_amount(lease: Lease, period: BillingPeriod) -> Decimal:
+    """Calculate a cent-rounded invoice amount for one billing period."""
+    return prorate_money(lease.rent_amount, period.covered_days, period.cycle_days)
+
+
+def _find_period(lease: Lease, period_start: date | None) -> BillingPeriod:
+    periods = lease_billing_periods(lease.start_date, lease.end_date, lease.billing_day)
+    if period_start is None:
+        return periods[0]
+    for period in periods:
+        if period.period_start == period_start or period.cycle_start == period_start:
+            return period
+    raise ValueError("period_start does not intersect the lease term")
+
+
+def build_invoice(lease: Lease, period: BillingPeriod) -> Invoice:
+    """Build an unsaved open invoice for ``period``."""
+    return Invoice(
+        lease_id=lease.id,
+        period_start=period.period_start,
+        period_end=period.period_end,
+        amount_due=invoice_amount(lease, period),
+        due_date=period.period_start,
+        status=InvoiceStatus.OPEN,
+    )
+
+
+async def _get_invoice(db: AsyncSession, lease: Lease, period: BillingPeriod) -> Invoice | None:
+    return cast(
+        Invoice | None,
+        await db.scalar(
+            select(Invoice).where(
+                Invoice.lease_id == lease.id,
+                Invoice.period_start == period.period_start,
+                Invoice.period_end == period.period_end,
+            )
+        ),
+    )
+
+
+async def generate_invoice(
+    db: AsyncSession,
+    lease: Lease,
+    *,
+    period_start: date | None = None,
+) -> Invoice:
+    """Persist one invoice for a lease billing period.
+
+    The operation is idempotent for the same lease and covered period. When no
+    period is supplied, the first period in the lease term is generated.
+    """
+    period = _find_period(lease, period_start)
+    existing = await _get_invoice(db, lease, period)
+    if existing is not None:
+        return existing
+
+    invoice = build_invoice(lease, period)
+    try:
+        async with db.begin_nested():
+            db.add(invoice)
+            await db.flush()
+    except IntegrityError:
+        existing = await _get_invoice(db, lease, period)
+        if existing is None:
+            raise
+        await db.commit()
+        return existing
+
+    await db.commit()
+    await db.refresh(invoice)
+    return invoice
+
+
+async def generate_invoices(db: AsyncSession, lease: Lease) -> list[Invoice]:
+    """Persist and return every billing-period invoice for a lease."""
+    invoices: list[Invoice] = []
+    for period in lease_billing_periods(lease.start_date, lease.end_date, lease.billing_day):
+        invoices.append(await generate_invoice(db, lease, period_start=period.period_start))
+    return invoices
+
+
+async def apply_late_fees(
+    db: AsyncSession,
+    *,
+    as_of: date | None = None,
+) -> list[Invoice]:
+    """Apply the flat late fee to invoices that are overdue and still unpaid.
+
+    An invoice becomes overdue on the day after ``due_date``. ``late_fee_amount``
+    is both an audit value and the persistent idempotency marker, so subsequent
+    sweeps cannot charge the same invoice again. The conditional update also
+    makes concurrent sweep executions safe.
+    """
+    sweep_date = as_of or date.today()
+    result = await db.scalars(
+        update(Invoice)
+        .where(
+            Invoice.due_date < sweep_date,
+            Invoice.status.in_(_UNPAID_STATUSES),
+            Invoice.late_fee_amount.is_(None),
+        )
+        .values(
+            amount_due=Invoice.amount_due + LATE_FEE_AMOUNT,
+            late_fee_amount=LATE_FEE_AMOUNT,
+            status=InvoiceStatus.OVERDUE,
+        )
+        .returning(Invoice)
+    )
+    invoices = list(result)
+    await db.commit()
+    return invoices
+
+
+calculate_invoice_amount = invoice_amount
+generate_lease_invoices = generate_invoices
+
+
+__all__ = [
+    "LATE_FEE_AMOUNT",
+    "apply_late_fees",
+    "build_invoice",
+    "calculate_invoice_amount",
+    "generate_invoice",
+    "generate_invoices",
+    "generate_lease_invoices",
+    "invoice_amount",
+]

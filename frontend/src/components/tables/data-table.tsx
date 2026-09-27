@@ -32,7 +32,9 @@ export function sortRows<T>(
     if (rightValue == null) return -1;
 
     if (typeof leftValue === "number" && typeof rightValue === "number") {
-      return direction === "asc" ? leftValue - rightValue : rightValue - leftValue;
+      return direction === "asc"
+        ? leftValue - rightValue
+        : rightValue - leftValue;
     }
 
     const leftString = String(leftValue).toLowerCase();
@@ -45,7 +47,11 @@ export function sortRows<T>(
   });
 }
 
-export function paginateRows<T>(rows: T[], page: number, pageSize: number): T[] {
+export function paginateRows<T>(
+  rows: T[],
+  page: number,
+  pageSize: number,
+): T[] {
   const safePage = Math.max(1, page);
   const safePageSize = Math.max(1, pageSize);
   const start = (safePage - 1) * safePageSize;
@@ -100,11 +106,15 @@ export function DataTable<T>({
   }, [activeSortDirection, activeSortKey, columns, data]);
 
   const totalPages =
-    total != null ? Math.max(1, Math.ceil(total / Math.max(pageSize, 1))) : Math.max(1, Math.ceil(sortedRows.length / Math.max(pageSize, 1)));
+    total != null
+      ? Math.max(1, Math.ceil(total / Math.max(pageSize, 1)))
+      : Math.max(1, Math.ceil(sortedRows.length / Math.max(pageSize, 1)));
   const visibleRows =
-    onPageChange != null || total != null
-      ? paginateRows(sortedRows, page, pageSize)
-      : sortedRows;
+    onPageChange != null
+      ? sortedRows
+      : total != null
+        ? paginateRows(sortedRows, page, pageSize)
+        : sortedRows;
 
   const handleSort = (key: string) => {
     const nextDirection =
@@ -170,21 +180,31 @@ export function DataTable<T>({
             ) : (
               visibleRows.map((row) => {
                 return (
-                  <tr key={rowKey(row)} className="border-b border-slate-200 last:border-b-0">
+                  <tr
+                    key={rowKey(row)}
+                    className="border-b border-slate-200 last:border-b-0"
+                  >
                     {columns.map((column) => {
-                      const value = column.accessor ? column.accessor(row) : undefined;
+                      const value = column.accessor
+                        ? column.accessor(row)
+                        : undefined;
                       const rendered = column.render
                         ? column.render(row)
                         : value == null
                           ? "—"
-                          : typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+                          : typeof value === "string" ||
+                              typeof value === "number" ||
+                              typeof value === "boolean"
                             ? String(value)
                             : value instanceof Date
                               ? value.toLocaleDateString()
                               : String(value);
 
                       return (
-                        <td key={`${rowKey(row)}-${column.key}`} className="px-4 py-3 align-middle">
+                        <td
+                          key={`${rowKey(row)}-${column.key}`}
+                          className="px-4 py-3 align-middle"
+                        >
                           {rendered}
                         </td>
                       );
