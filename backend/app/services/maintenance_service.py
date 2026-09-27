@@ -8,8 +8,14 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ConflictError, ValidationError
-from app.models.maintenance import MaintenanceRequest, MaintenanceStatus
+from app.core.exceptions import ConflictError, NotFoundError, ValidationError
+from app.models.maintenance import (
+    MaintenanceComment,
+    MaintenancePriority,
+    MaintenanceRequest,
+    MaintenanceStatus,
+)
+from app.models.user import User
 from app.repositories import maintenance as maintenance_repository
 
 INVALID_TRANSITION_CODE = "invalid_maintenance_status_transition"
@@ -22,6 +28,72 @@ VALID_STATUS_TRANSITIONS: Mapping[MaintenanceStatus, frozenset[MaintenanceStatus
     MaintenanceStatus.RESOLVED: frozenset({MaintenanceStatus.CLOSED, MaintenanceStatus.OPEN}),
     MaintenanceStatus.CLOSED: frozenset({MaintenanceStatus.OPEN}),
 }
+
+
+async def list_requests(
+    db: AsyncSession,
+    current_user: User,
+    *,
+    unit_id: uuid.UUID | None,
+    status: MaintenanceStatus | None,
+    priority: MaintenancePriority | None,
+    page: int,
+    page_size: int,
+) -> tuple[list[MaintenanceRequest], int]:
+    """List requests visible through the caller's properties or active lease."""
+    return await maintenance_repository.list_visible(
+        db,
+        current_user.id,
+        current_user.role,
+        unit_id=unit_id,
+        request_status=status,
+        priority=priority,
+        page=page,
+        page_size=page_size,
+    )
+
+
+async def create_request(
+    db: AsyncSession,
+    current_user: User,
+    values: dict[str, object],
+) -> MaintenanceRequest:
+    """Create an open request for a unit the caller may access."""
+    unit_id = values.get("unit_id")
+    if not isinstance(unit_id, uuid.UUID) or not await maintenance_repository.can_access_unit(
+        db, unit_id, current_user.id, current_user.role
+    ):
+        raise NotFoundError("Unit not found")
+    return await maintenance_repository.create(
+        db,
+        {
+            **values,
+            "reported_by": current_user.id,
+            "status": MaintenanceStatus.OPEN,
+            "assigned_to": None,
+            "resolved_at": None,
+        },
+    )
+
+
+async def get_request(
+    db: AsyncSession,
+    request_id: uuid.UUID,
+    current_user: User,
+    *,
+    for_update: bool = False,
+) -> MaintenanceRequest:
+    """Return a visible request without disclosing inaccessible IDs."""
+    request = await maintenance_repository.get_visible(
+        db,
+        request_id,
+        current_user.id,
+        current_user.role,
+        for_update=for_update,
+    )
+    if request is None:
+        raise NotFoundError("Maintenance request not found")
+    return request
 
 
 def _invalid_transition(current: MaintenanceStatus, target: MaintenanceStatus) -> ConflictError:
@@ -125,12 +197,50 @@ async def update_request(
     return await maintenance_repository.update(db, request)
 
 
+async def update_visible_request(
+    db: AsyncSession,
+    request_id: uuid.UUID,
+    current_user: User,
+    values: Mapping[str, object],
+) -> MaintenanceRequest:
+    """Update a manager-visible request while enforcing workflow rules."""
+    request = await get_request(db, request_id, current_user, for_update=True)
+    assigned_to = values.get("assigned_to", _UNSET)
+    if isinstance(assigned_to, uuid.UUID) and await db.get(User, assigned_to) is None:
+        raise NotFoundError("Assignee not found")
+    return await update_request(db, request, values)
+
+
+async def add_comment(
+    db: AsyncSession,
+    request_id: uuid.UUID,
+    current_user: User,
+    *,
+    body: str,
+) -> MaintenanceComment:
+    """Append a comment when the caller can see the parent request."""
+    await get_request(db, request_id, current_user)
+    if not body.strip():
+        raise ValidationError("Comment body is required")
+    return await maintenance_repository.create_comment(
+        db,
+        request_id=request_id,
+        author_id=current_user.id,
+        body=body,
+    )
+
+
 __all__ = [
     "INVALID_TRANSITION_CODE",
     "VALID_STATUS_TRANSITIONS",
+    "add_comment",
     "assign_request",
+    "create_request",
+    "get_request",
+    "list_requests",
     "reopen_request",
     "transition_status",
     "update_request",
+    "update_visible_request",
     "validate_status_transition",
 ]
