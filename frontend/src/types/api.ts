@@ -4,6 +4,10 @@ import type {
   LeaseStatus,
   Invoice,
   InvoiceStatus,
+  MaintenanceComment,
+  MaintenancePriority,
+  MaintenanceRequest,
+  MaintenanceStatus,
   Paginated,
   Payment,
   PaymentMethod,
@@ -47,6 +51,10 @@ export type {
   LeaseStatus,
   Invoice,
   InvoiceStatus,
+  MaintenanceComment,
+  MaintenancePriority,
+  MaintenanceRequest,
+  MaintenanceStatus,
   Paginated,
   Payment,
   PaymentMethod,
@@ -62,6 +70,7 @@ export type UnitList = Paginated<Unit>;
 export type TenantList = Paginated<Tenant>;
 export type LeaseList = Paginated<Lease>;
 export type InvoiceList = Paginated<Invoice>;
+export type MaintenanceRequestList = Paginated<MaintenanceRequest>;
 export interface PropertyCreate {
   name: string;
   address_line1: string;
@@ -139,4 +148,18 @@ export interface ArrearsList {
   outstanding_total: string;
   page: number;
   page_size: number;
+}
+export interface MaintenanceRequestCreate {
+  unit_id: string;
+  title: string;
+  description: string;
+  priority: MaintenancePriority;
+}
+export interface MaintenanceRequestUpdate {
+  priority?: MaintenancePriority;
+  status?: MaintenanceStatus;
+  assigned_to?: string | null;
+}
+export interface MaintenanceCommentCreate {
+  body: string;
 }

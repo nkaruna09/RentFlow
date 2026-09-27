@@ -6,6 +6,9 @@ export type LeaseStatus = "draft" | "active" | "expired" | "terminated";
 export type InvoiceStatus = "open" | "paid" | "partial" | "overdue" | "void";
 export type PaymentMethod =
   "bank_transfer" | "card" | "cash" | "check" | "other";
+export type MaintenancePriority = "low" | "medium" | "high" | "emergency";
+export type MaintenanceStatus =
+  "open" | "assigned" | "in_progress" | "resolved" | "closed";
 
 export interface Property {
   id: string;
@@ -75,6 +78,27 @@ export interface Payment {
   paid_at: string;
   method: PaymentMethod;
   reference: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface MaintenanceRequest {
+  id: string;
+  unit_id: string;
+  reported_by: string;
+  title: string;
+  description: string;
+  priority: MaintenancePriority;
+  status: MaintenanceStatus;
+  assigned_to: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface MaintenanceComment {
+  id: string;
+  request_id: string;
+  author_id: string;
+  body: string;
   created_at: string;
   updated_at: string;
 }
