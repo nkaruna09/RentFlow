@@ -130,6 +130,64 @@ async def test_partial_payment_updates_status_and_arrears(
                 f"/api/v1/payments/invoices/{invoice_id}", headers=headers
             )
             assert after_paid.json()["status"] == "paid"
+            cleared_arrears = await client.get("/api/v1/payments/arrears", headers=headers)
+            assert cleared_arrears.json()["items"] == []
+            assert Decimal(cleared_arrears.json()["outstanding_total"]) == Decimal("0.00")
+    finally:
+        app.dependency_overrides.clear()
+
+
+async def test_invoice_filters_duplicates_and_overpayments(
+    db_session: AsyncSession, make_user
+) -> None:
+    owner, lease = await _lease_fixture(db_session, make_user)
+
+    async def override_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_db
+    headers = {"Authorization": f"Bearer {create_access_token(str(owner.id))}"}
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            created = await client.post(
+                "/api/v1/payments/invoices",
+                json=_invoice_payload(lease.id),
+                headers=headers,
+            )
+            invoice_id = created.json()["id"]
+
+            filtered = await client.get(
+                "/api/v1/payments/invoices",
+                params={"lease_id": str(lease.id), "status": "open"},
+                headers=headers,
+            )
+            no_matches = await client.get(
+                "/api/v1/payments/invoices",
+                params={"status": "paid"},
+                headers=headers,
+            )
+            duplicate = await client.post(
+                "/api/v1/payments/invoices",
+                json=_invoice_payload(lease.id),
+                headers=headers,
+            )
+            overpayment = await client.post(
+                f"/api/v1/payments/invoices/{invoice_id}/payments",
+                json={
+                    "amount": "100.01",
+                    "paid_at": "2026-01-02T12:00:00Z",
+                    "method": "card",
+                },
+                headers=headers,
+            )
+            unchanged = await client.get(f"/api/v1/payments/invoices/{invoice_id}", headers=headers)
+
+            assert filtered.status_code == 200
+            assert filtered.json()["total"] == 1
+            assert no_matches.json()["total"] == 0
+            assert duplicate.status_code == 409
+            assert overpayment.status_code == 400
+            assert unchanged.json()["status"] == "open"
     finally:
         app.dependency_overrides.clear()
 

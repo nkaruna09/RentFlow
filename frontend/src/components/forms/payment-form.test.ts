@@ -18,4 +18,20 @@ describe("payment form values", () => {
       paid_at: "2026-09-26T12:00:00.000Z",
     });
   });
+
+  it("preserves a supplied reference and payment method", () => {
+    expect(
+      toPaymentInput({
+        amount: "20.00",
+        method: "cash",
+        reference: " receipt-42 ",
+        paid_date: "2026-09-27",
+      }),
+    ).toEqual({
+      amount: "20.00",
+      method: "cash",
+      reference: "receipt-42",
+      paid_at: "2026-09-27T12:00:00.000Z",
+    });
+  });
 });

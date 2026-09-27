@@ -14,7 +14,13 @@ from app.models.unit import Unit, UnitStatus
 from app.workers.scheduler import run_monthly_invoicing, run_overdue_sweep
 
 
-async def _persist_lease(db: AsyncSession, make_user) -> Lease:
+async def _persist_lease(
+    db: AsyncSession,
+    make_user,
+    *,
+    status: LeaseStatus = LeaseStatus.ACTIVE,
+    billing_day: int = 1,
+) -> Lease:
     owner = await make_user()
     property_ = Property(
         owner_id=owner.id,
@@ -46,8 +52,8 @@ async def _persist_lease(db: AsyncSession, make_user) -> Lease:
         end_date=date(2026, 4, 1),
         rent_amount=Decimal("1000.00"),
         deposit_amount=Decimal("1000.00"),
-        billing_day=1,
-        status=LeaseStatus.ACTIVE,
+        billing_day=billing_day,
+        status=status,
     )
     db.add_all([property_, unit, tenant, lease])
     await db.flush()
@@ -83,3 +89,23 @@ async def test_overdue_sweep_marks_invoice_and_charges_once(
     assert second_run == []
     assert invoices[0].amount_due == Decimal("1020.00")
     assert invoices[0].status is InvoiceStatus.OVERDUE
+
+
+async def test_monthly_invoicing_uses_lease_billing_day(
+    db_session: AsyncSession, make_user
+) -> None:
+    await _persist_lease(db_session, make_user, billing_day=15)
+
+    invoices = await run_monthly_invoicing(db_session, billing_month=date(2026, 2, 1))
+
+    assert len(invoices) == 1
+    assert invoices[0].period_start == date(2026, 2, 15)
+    assert invoices[0].due_date == date(2026, 2, 15)
+
+
+async def test_monthly_invoicing_ignores_draft_leases(db_session: AsyncSession, make_user) -> None:
+    await _persist_lease(db_session, make_user, status=LeaseStatus.DRAFT)
+
+    invoices = await run_monthly_invoicing(db_session, billing_month=date(2026, 2, 1))
+
+    assert invoices == []

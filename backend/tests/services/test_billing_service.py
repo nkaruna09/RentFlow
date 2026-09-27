@@ -63,6 +63,31 @@ def test_money_helpers_reject_float_inputs() -> None:
         round_money(10.005)  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity"])
+def test_money_helpers_reject_non_finite_values(value: str) -> None:
+    with pytest.raises(ValueError, match="finite"):
+        round_money(value)
+
+
+@pytest.mark.parametrize(
+    ("numerator", "denominator", "message"),
+    [
+        (-1, 30, "numerator must be non-negative"),
+        (1, 0, "denominator must be positive"),
+        (1, -30, "denominator must be positive"),
+    ],
+)
+def test_proration_rejects_invalid_ratios(numerator: int, denominator: int, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        prorate_money("100.00", numerator, denominator)
+
+
+@pytest.mark.parametrize("parts", [0, -1, True, 1.5])
+def test_split_money_requires_a_positive_integer(parts: object) -> None:
+    with pytest.raises(ValueError, match="positive integer"):
+        split_money("10.00", parts)  # type: ignore[arg-type]
+
+
 def _lease(*, start: date, end: date, status: LeaseStatus = LeaseStatus.ACTIVE) -> Lease:
     return Lease(
         id=uuid4(),
@@ -214,10 +239,12 @@ async def test_late_fee_sweep_applies_fee_only_once(db_session: AsyncSession, ma
     await db_session.flush()
     invoice = await generate_invoice(db_session, lease)
 
+    due_date_sweep = await apply_late_fees(db_session, as_of=date(2026, 1, 1))
     first_sweep = await apply_late_fees(db_session, as_of=date(2026, 1, 2))
     second_sweep = await apply_late_fees(db_session, as_of=date(2026, 1, 2))
     await db_session.refresh(invoice)
 
+    assert due_date_sweep == []
     assert [charged.id for charged in first_sweep] == [invoice.id]
     assert second_sweep == []
     assert invoice.amount_due == Decimal("1020.00")
