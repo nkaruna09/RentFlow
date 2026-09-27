@@ -26,6 +26,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.lease import Lease
+    from app.models.maintenance import MaintenanceRequest
     from app.models.property import Property
 
 
@@ -68,6 +69,7 @@ class Unit(Base):
 
     property: Mapped[Property] = relationship(back_populates="units")
     leases: Mapped[list[Lease]] = relationship(back_populates="unit")
+    maintenance_requests: Mapped[list[MaintenanceRequest]] = relationship(back_populates="unit")
 
 
 __all__ = ["Unit", "UnitStatus"]

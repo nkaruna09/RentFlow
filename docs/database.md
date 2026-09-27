@@ -8,10 +8,11 @@ PostgreSQL 16. Schema managed exclusively through Alembic — no manual DDL agai
 users
   └──< properties            (owner_id)
          └──< units          (property_id)
-                └──< leases  (unit_id, tenant_id)
-                       ├──< invoices   (lease_id)
-                       │      └──< payments (invoice_id)
-                       └──< maintenance_requests (unit_id, reported_by)
+                ├──< leases  (unit_id, tenant_id)
+                │      └──< invoices   (lease_id)
+                │             └──< payments (invoice_id)
+                └──< maintenance_requests (unit_id, reported_by, assigned_to)
+                       └──< maintenance_comments (request_id, author_id)
 
 tenants ──< leases
 documents ── polymorphic metadata for blobs in Azure Storage
@@ -107,6 +108,18 @@ documents ── polymorphic metadata for blobs in Azure Storage
 | status | enum | `open` · `assigned` · `in_progress` · `resolved` · `closed` |
 | assigned_to | uuid | FK → users, nullable |
 | resolved_at | timestamptz | nullable |
+
+Maintenance comments are stored in a separate `maintenance_comments` table rather than a
+`jsonb` column. Comments are append-oriented API sub-resources with their own author and
+timestamps, so a normalized table preserves the audit trail and avoids rewriting the request row.
+
+### `maintenance_comments`
+| Column | Type | Notes |
+| --- | --- | --- |
+| id | uuid | PK |
+| request_id | uuid | FK → maintenance_requests, cascade delete |
+| author_id | uuid | FK → users |
+| body | text | |
 
 ### `documents`
 | Column | Type | Notes |
