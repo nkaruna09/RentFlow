@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import Settings, get_settings
 from app.core.exceptions import register_exception_handlers
-from app.core.logging import setup_logging
+from app.core.logging import configure_monitoring, setup_logging
 
 
 @asynccontextmanager
@@ -38,6 +38,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = resolved_settings
+    if configure_monitoring(resolved_settings):
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        # The app object already exists, so the distro's auto-instrumentation
+        # cannot patch it; instrument this instance explicitly.
+        FastAPIInstrumentor.instrument_app(app, excluded_urls="api/v1/health/.*")
 
     app.add_middleware(
         CORSMiddleware,
