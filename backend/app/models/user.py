@@ -5,12 +5,16 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Enum, Text, func
 from sqlalchemy.dialects.postgresql import CITEXT, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.maintenance import MaintenanceComment, MaintenanceRequest
 
 
 class UserRole(str, enum.Enum):
@@ -45,6 +49,16 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+
+    reported_maintenance_requests: Mapped[list[MaintenanceRequest]] = relationship(
+        back_populates="reporter",
+        foreign_keys="MaintenanceRequest.reported_by",
+    )
+    assigned_maintenance_requests: Mapped[list[MaintenanceRequest]] = relationship(
+        back_populates="assignee",
+        foreign_keys="MaintenanceRequest.assigned_to",
+    )
+    maintenance_comments: Mapped[list[MaintenanceComment]] = relationship(back_populates="author")
 
 
 __all__ = ["User", "UserRole"]

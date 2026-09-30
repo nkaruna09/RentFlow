@@ -87,6 +87,10 @@ idempotent. Paid and void invoices are never charged.
 | Money           | `Decimal` end to end; never floats                            |
 | Time            | UTC in storage and transport; localised only for display      |
 
+Maintenance submission and resolution events currently emit structured log-only
+notifications. Azure Communication Services email/SMS delivery is deferred to M7;
+the notification service is the integration boundary for that replacement.
+
 ## 7. Open questions
 
 - Multi-tenancy: single database with an owner column, or schema per organisation?
