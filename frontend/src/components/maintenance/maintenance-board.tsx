@@ -111,7 +111,9 @@ function RequestCard({
               <option key={status} value={status}>
                 {status === "open"
                   ? "Reopen"
-                  : `Move to ${statusLabels[status]}`}
+                  : status === "assigned"
+                    ? "Assign to me"
+                    : `Move to ${statusLabels[status]}`}
               </option>
             ))}
           </select>

@@ -156,6 +156,41 @@ describe("MaintenancePage", () => {
     expect(listMaintenanceRequests).toHaveBeenCalledTimes(1);
   });
 
+  it("assigns an open request to the current user via assigned_to", async () => {
+    const openRequest: MaintenanceRequest = {
+      ...request,
+      status: "open",
+      assigned_to: null,
+    };
+    vi.mocked(listMaintenanceRequests).mockResolvedValue({
+      items: [openRequest],
+      total: 1,
+      page: 1,
+      page_size: 100,
+    });
+    vi.mocked(updateMaintenanceRequest).mockResolvedValue({
+      ...openRequest,
+      status: "assigned",
+      assigned_to: landlord.id,
+    });
+    const user = userEvent.setup();
+    render(<MaintenancePage />);
+
+    const select = await screen.findByLabelText("Change status for Burst pipe");
+    await screen.findByRole("option", { name: "Assign to me" });
+    await user.selectOptions(select, "assigned");
+
+    expect(updateMaintenanceRequest).toHaveBeenCalledWith(request.id, {
+      assigned_to: landlord.id,
+    });
+    const assignedColumn = screen
+      .getByRole("heading", { name: "Assigned" })
+      .closest("section");
+    expect(
+      within(assignedColumn as HTMLElement).getByText("Burst pipe"),
+    ).toBeTruthy();
+  });
+
   it("submits only against a unit from the tenant's active leases", async () => {
     const tenant: User = {
       ...landlord,

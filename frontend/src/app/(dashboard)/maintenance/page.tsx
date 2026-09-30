@@ -20,6 +20,7 @@ import { listAllPages, MAX_API_PAGE_SIZE } from "@/lib/dashboard";
 import type {
   MaintenancePriority,
   MaintenanceRequest,
+  MaintenanceRequestUpdate,
   MaintenanceStatus,
   Unit,
   User,
@@ -159,16 +160,29 @@ export default function MaintenancePage() {
     status: MaintenanceStatus,
   ) => {
     const previous = request;
+    // Assignment is driven by `assigned_to`; the API moves the request to
+    // `assigned` itself and rejects a bare status change without an assignee.
+    const assignee = status === "assigned" ? currentUser?.id : undefined;
+    if (status === "assigned" && !assignee) {
+      setError("Unable to assign this request without a signed-in user.");
+      return;
+    }
+    const changes: MaintenanceRequestUpdate = assignee
+      ? { assigned_to: assignee }
+      : { status };
+
     setError(null);
     setUpdatingIds((current) => new Set(current).add(request.id));
     setRequests((current) =>
       current.map((item) =>
-        item.id === request.id ? { ...item, status } : item,
+        item.id === request.id
+          ? { ...item, status, ...(assignee ? { assigned_to: assignee } : {}) }
+          : item,
       ),
     );
 
     try {
-      const updated = await updateMaintenanceRequest(request.id, { status });
+      const updated = await updateMaintenanceRequest(request.id, changes);
       setRequests((current) =>
         current.map((item) => (item.id === updated.id ? updated : item)),
       );

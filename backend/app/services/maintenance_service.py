@@ -184,6 +184,9 @@ async def update_request(
         if not isinstance(requested_status, MaintenanceStatus):
             raise ValidationError("status must be a valid maintenance status")
         validate_status_transition(planned_status, requested_status)
+        planned_assignee = request.assigned_to if assigned_to is _UNSET else assigned_to
+        if requested_status == MaintenanceStatus.ASSIGNED and planned_assignee is None:
+            raise ConflictError("A request can only move to 'assigned' with an assignee")
 
     if (
         assigned_to is None

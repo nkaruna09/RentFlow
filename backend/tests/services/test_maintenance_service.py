@@ -214,3 +214,16 @@ async def test_invalid_combined_update_is_not_partially_applied() -> None:
     assert request.status is MaintenanceStatus.OPEN
     assert request.assigned_to is None
     update_mock.assert_not_awaited()
+
+
+async def test_status_assigned_without_an_assignee_is_rejected() -> None:
+    request = _request()
+
+    with (
+        patch.object(maintenance_repository, "update", AsyncMock()) as update_mock,
+        pytest.raises(ConflictError, match="with an assignee"),
+    ):
+        await update_request(AsyncMock(), request, {"status": MaintenanceStatus.ASSIGNED})
+
+    assert request.status is MaintenanceStatus.OPEN
+    update_mock.assert_not_awaited()

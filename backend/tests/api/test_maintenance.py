@@ -139,6 +139,13 @@ async def test_tenant_submission_filters_manager_workflow_and_comments(
                 "code": "invalid_maintenance_status_transition",
             }
 
+            unassigned = await client.patch(
+                f"/api/v1/maintenance/{request_id}",
+                json={"status": "assigned"},
+                headers=_headers(manager.id),
+            )
+            assert unassigned.status_code == 409
+
             assigned = await client.patch(
                 f"/api/v1/maintenance/{request_id}",
                 json={"assigned_to": str(manager.id)},
