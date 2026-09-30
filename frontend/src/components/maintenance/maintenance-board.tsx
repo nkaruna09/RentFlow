@@ -46,6 +46,7 @@ export interface MaintenanceBoardProps {
   requests: MaintenanceRequest[];
   unitLabels: Record<string, string>;
   updatingIds?: ReadonlySet<string>;
+  canManageStatus?: boolean;
   onStatusChange: (
     request: MaintenanceRequest,
     status: MaintenanceStatus,
@@ -56,11 +57,13 @@ function RequestCard({
   request,
   unitLabel,
   isUpdating,
+  canManageStatus,
   onStatusChange,
 }: {
   request: MaintenanceRequest;
   unitLabel: string;
   isUpdating: boolean;
+  canManageStatus: boolean;
   onStatusChange: MaintenanceBoardProps["onStatusChange"];
 }) {
   return (
@@ -83,30 +86,37 @@ function RequestCard({
         <p>Reported {dateFormatter.format(new Date(request.created_at))}</p>
       </div>
 
-      <div className="mt-4">
-        <label className="sr-only" htmlFor={`maintenance-status-${request.id}`}>
-          Change status for {request.title}
-        </label>
-        <select
-          id={`maintenance-status-${request.id}`}
-          value=""
-          disabled={isUpdating}
-          onChange={(event) => {
-            const status = event.target.value as MaintenanceStatus;
-            if (status) void onStatusChange(request, status);
-          }}
-          className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-wait disabled:opacity-60"
-        >
-          <option value="" disabled>
-            {isUpdating ? "Updating..." : "Change status"}
-          </option>
-          {nextStatuses[request.status].map((status) => (
-            <option key={status} value={status}>
-              {status === "open" ? "Reopen" : `Move to ${statusLabels[status]}`}
+      {canManageStatus ? (
+        <div className="mt-4">
+          <label
+            className="sr-only"
+            htmlFor={`maintenance-status-${request.id}`}
+          >
+            Change status for {request.title}
+          </label>
+          <select
+            id={`maintenance-status-${request.id}`}
+            value=""
+            disabled={isUpdating}
+            onChange={(event) => {
+              const status = event.target.value as MaintenanceStatus;
+              if (status) void onStatusChange(request, status);
+            }}
+            className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-wait disabled:opacity-60"
+          >
+            <option value="" disabled>
+              {isUpdating ? "Updating..." : "Change status"}
             </option>
-          ))}
-        </select>
-      </div>
+            {nextStatuses[request.status].map((status) => (
+              <option key={status} value={status}>
+                {status === "open"
+                  ? "Reopen"
+                  : `Move to ${statusLabels[status]}`}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -115,6 +125,7 @@ export function MaintenanceBoard({
   requests,
   unitLabels,
   updatingIds = new Set<string>(),
+  canManageStatus = true,
   onStatusChange,
 }: MaintenanceBoardProps) {
   return (
@@ -155,6 +166,7 @@ export function MaintenanceBoard({
                         `Unit ${request.unit_id.slice(0, 8)}`
                       }
                       isUpdating={updatingIds.has(request.id)}
+                      canManageStatus={canManageStatus}
                       onStatusChange={onStatusChange}
                     />
                   ))
