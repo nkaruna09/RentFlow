@@ -19,7 +19,7 @@ from app.models.maintenance import (
 from app.models.property import Property
 from app.models.tenant import Tenant
 from app.models.unit import Unit
-from app.models.user import UserRole
+from app.models.user import User, UserRole
 
 
 def _visible_requests(user_id: uuid.UUID, role: UserRole) -> Select[tuple[MaintenanceRequest]]:
@@ -103,6 +103,32 @@ async def can_access_unit(
     return await db.scalar(query) is not None
 
 
+async def get_unit_owner(db: AsyncSession, unit_id: uuid.UUID) -> User | None:
+    """Return the landlord/manager user that owns a unit's property."""
+    return cast(
+        User | None,
+        await db.scalar(
+            select(User)
+            .join(Property, Property.owner_id == User.id)
+            .join(Unit, Unit.property_id == Property.id)
+            .where(Unit.id == unit_id)
+        ),
+    )
+
+
+async def get_active_tenant_user(db: AsyncSession, unit_id: uuid.UUID) -> User | None:
+    """Return the user linked to the unit's active tenant lease, if any."""
+    return cast(
+        User | None,
+        await db.scalar(
+            select(User)
+            .join(Tenant, Tenant.user_id == User.id)
+            .join(Lease, Lease.tenant_id == Tenant.id)
+            .where(Lease.unit_id == unit_id, Lease.status == LeaseStatus.ACTIVE)
+        ),
+    )
+
+
 async def create(db: AsyncSession, values: dict[str, object]) -> MaintenanceRequest:
     request = MaintenanceRequest(**values)
     db.add(request)
@@ -136,6 +162,8 @@ __all__ = [
     "can_access_unit",
     "create",
     "create_comment",
+    "get_active_tenant_user",
+    "get_unit_owner",
     "get_visible",
     "list_visible",
     "update",

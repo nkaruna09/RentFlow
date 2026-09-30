@@ -17,6 +17,7 @@ from app.models.maintenance import (
 )
 from app.models.user import User
 from app.repositories import maintenance as maintenance_repository
+from app.services import notification_service
 
 INVALID_TRANSITION_CODE = "invalid_maintenance_status_transition"
 _UNSET = object()
@@ -64,7 +65,7 @@ async def create_request(
         db, unit_id, current_user.id, current_user.role
     ):
         raise NotFoundError("Unit not found")
-    return await maintenance_repository.create(
+    request = await maintenance_repository.create(
         db,
         {
             **values,
@@ -74,6 +75,12 @@ async def create_request(
             "resolved_at": None,
         },
     )
+    recipient = await maintenance_repository.get_unit_owner(db, request.unit_id)
+    notification_service.notify_maintenance_submitted(
+        request=request,
+        recipient=recipient,
+    )
+    return request
 
 
 async def get_request(
@@ -160,6 +167,7 @@ async def update_request(
     transitioned_at: datetime | None = None,
 ) -> MaintenanceRequest:
     """Apply assignment/workflow changes and persist the request atomically."""
+    previous_status = request.status
     updates = dict(values)
     assigned_to = updates.pop("assigned_to", _UNSET)
     requested_status = updates.pop("status", _UNSET)
@@ -194,7 +202,17 @@ async def update_request(
 
     for field, value in updates.items():
         setattr(request, field, value)
-    return await maintenance_repository.update(db, request)
+    updated = await maintenance_repository.update(db, request)
+    if (
+        previous_status != MaintenanceStatus.RESOLVED
+        and updated.status == MaintenanceStatus.RESOLVED
+    ):
+        recipient = await maintenance_repository.get_active_tenant_user(db, updated.unit_id)
+        notification_service.notify_maintenance_resolved(
+            request=updated,
+            recipient=recipient,
+        )
+    return updated
 
 
 async def update_visible_request(
