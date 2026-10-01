@@ -28,6 +28,7 @@ def test_monitoring_is_a_noop_without_a_connection_string() -> None:
 def test_monitoring_exports_the_app_logger_once() -> None:
     settings = Settings(
         environment="staging",
+        secret_key="test-secret",
         applicationinsights_connection_string="InstrumentationKey=00000000-0000-0000-0000-000000000000",
     )
     with patch("azure.monitor.opentelemetry.configure_azure_monitor") as configure:

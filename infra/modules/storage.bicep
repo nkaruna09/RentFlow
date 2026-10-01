@@ -14,6 +14,9 @@ param environmentName string
 @description('Tags applied to every resource.')
 param tags object
 
+@description('Optional suffix for globally unique names, used only if the default name is taken.')
+param globalNameSuffix string = ''
+
 @description('Replication SKU. LRS is enough for staging; production should use ZRS.')
 @allowed([
   'Standard_LRS'
@@ -33,7 +36,7 @@ param containerName string = 'rentflow-documents'
 
 // Storage account names are 3-24 lowercase letters/digits with no dashes, so the
 // <type>-rentflow-<env> convention becomes st + rentflow + env (e.g. strentflowstaging).
-var accountName = take(toLower('strentflow${replace(environmentName, '-', '')}'), 24)
+var accountName = take(toLower('strentflow${replace(environmentName, '-', '')}${globalNameSuffix}'), 24)
 
 resource account 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: accountName
