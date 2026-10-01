@@ -18,8 +18,15 @@
 @description('Azure region for the environment and apps.')
 param location string
 
-@description('Deployment environment name, e.g. staging or production.')
+@description('Short environment name used in resource names, e.g. staging or prod.')
 param environmentName string
+
+@description('Value of the ENVIRONMENT setting passed to the app: staging or production.')
+@allowed([
+  'staging'
+  'production'
+])
+param appEnvironment string
 
 @description('Tags applied to every resource.')
 param tags object
@@ -83,7 +90,6 @@ param maxReplicas int = 3
 @description('Concurrent HTTP requests per replica before scaling out.')
 param concurrentRequests int = 50
 
-var appEnvironment = environmentName == 'production' ? 'production' : 'staging'
 var apiName = 'ca-rentflow-api-${environmentName}'
 var webName = 'ca-rentflow-web-${environmentName}'
 
