@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     database_url: str = "postgresql+asyncpg://rentflow:rentflow@db:5432/rentflow"
+    # Azure: sign in to PostgreSQL with a managed-identity Entra token instead of
+    # a password. DATABASE_URL then names the identity as the user, with no password.
+    database_entra_auth: bool = False
     secret_key: str = "change-me"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7

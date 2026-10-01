@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.config import settings
 from app.db.base import Base
+from app.db.session import use_entra_token_auth
 
 config = context.config
 if config.config_file_name is not None:
@@ -47,6 +48,8 @@ async def run_migrations_online() -> None:
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+    if settings.database_entra_auth:
+        use_entra_token_auth(connectable)
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
