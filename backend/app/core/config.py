@@ -26,8 +26,16 @@ class Settings(BaseSettings):
 
     backend_cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
 
+    # Client ID of the user-assigned managed identity the app runs as in Azure.
+    # Unset locally, where DefaultAzureCredential falls back to developer logins.
+    azure_client_id: str | None = None
+
+    # Blob Storage: connection string locally (Azurite), account URL + managed
+    # identity in Azure. Shared-key access is disabled on the Azure accounts.
     azure_storage_connection_string: str | None = None
+    azure_storage_account_url: str | None = None
     azure_storage_container: str = "rentflow-documents"
+    max_upload_bytes: int = 10 * 1024 * 1024
     azure_key_vault_url: str | None = None
     applicationinsights_connection_string: str | None = None
     azure_communication_connection_string: str | None = None

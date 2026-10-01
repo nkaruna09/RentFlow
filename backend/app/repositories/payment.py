@@ -75,6 +75,21 @@ async def get_for_owner(
     return cast(Invoice | None, await db.scalar(query))
 
 
+async def get_payment_for_owner(
+    db: AsyncSession, payment_id: uuid.UUID, owner_id: uuid.UUID
+) -> Payment | None:
+    """Return a payment whose invoice belongs to one of the owner's properties."""
+    invoices = _owner_invoices(owner_id).subquery()
+    return cast(
+        Payment | None,
+        await db.scalar(
+            select(Payment)
+            .join(invoices, Payment.invoice_id == invoices.c.id)
+            .where(Payment.id == payment_id)
+        ),
+    )
+
+
 async def create_invoice(db: AsyncSession, values: dict[str, object]) -> Invoice:
     return await invoice_repository.create(db, values)
 
@@ -144,6 +159,7 @@ __all__ = [
     "create_invoice",
     "create_payment",
     "get_for_owner",
+    "get_payment_for_owner",
     "list_arrears",
     "list_for_owner",
     "total_paid",

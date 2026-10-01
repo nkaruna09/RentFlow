@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.health import router as health_router
 from app.api.v1.endpoints.leases import router as leases_router
 from app.api.v1.endpoints.maintenance import router as maintenance_router
@@ -13,6 +14,7 @@ from app.api.v1.endpoints.units import router as units_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_router)
+api_router.include_router(documents_router)
 api_router.include_router(health_router)
 api_router.include_router(leases_router)
 api_router.include_router(maintenance_router)

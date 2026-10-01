@@ -95,4 +95,12 @@ the notification service is the integration boundary for that replacement.
 
 - Multi-tenancy: single database with an owner column, or schema per organisation?
 - Payment processing: integrate a provider, or record payments manually first?
-- File uploads: direct-to-blob with SAS tokens, or proxied through the API?
+- ~~File uploads: direct-to-blob with SAS tokens, or proxied through the API?~~
+  **Decided (M6): proxied through the API.** `POST /documents` streams the file to
+  Blob Storage with the API's managed identity, and `GET /documents/{id}/content`
+  streams it back. Reasons: files are small (≤ 10 MB lease PDFs, receipts, photos);
+  authorization stays in one place (the same visibility rules as the owning lease,
+  payment or maintenance request); content type and size are validated before
+  anything is stored; and the storage account can disable shared-key auth entirely
+  with no SAS tokens to leak or expire. Revisit with user-delegation SAS if large
+  uploads (e.g. video) ever make API bandwidth a problem.

@@ -125,9 +125,16 @@ timestamps, so a normalized table preserves the audit trail and avoids rewriting
 | Column | Type | Notes |
 | --- | --- | --- |
 | id | uuid | PK |
-| owner_type / owner_id | text / uuid | polymorphic link |
-| blob_url | text | Azure Blob Storage |
-| filename / content_type / size_bytes | text / text / bigint | |
+| owner_type / owner_id | enum / uuid | polymorphic link: `lease`, `payment` (receipts), `maintenance_request` (photos); indexed together |
+| blob_url | text | Azure Blob Storage, `rentflow-documents/<owner_type>/<owner_id>/<id>/<filename>` |
+| filename / content_type / size_bytes | text / text / bigint | original filename; PDF, JPEG, PNG or WebP; max 10 MB |
+| uploaded_by | uuid | FK → users |
+| created_at | timestamptz | |
+
+`owner_id` has no foreign key because it points at different tables depending on
+`owner_type`. `document_service` checks that the owner exists and is visible to the
+caller before writing a row. There is no delete endpoint yet; blob soft delete
+(7 days) covers accidental deletion in storage.
 
 ## Conventions
 

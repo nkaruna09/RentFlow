@@ -111,6 +111,24 @@ Arrears are grouped by lease and include a portfolio-wide outstanding total.
 | PATCH | `/maintenance/{id}` | Update status, priority, assignee |
 | POST | `/maintenance/{id}/comments` | Add a comment |
 
+## Documents — `/documents`
+
+Files attached to a lease (signed PDFs), a payment (receipts) or a maintenance
+request (photos). Uploads and downloads are proxied through the API; blob URLs are
+never returned. Access follows the owning record, and anything the caller can't see is a 404.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/documents?owner_type=&owner_id=` | List documents attached to a record |
+| POST | `/documents` | Upload (`multipart/form-data`: `owner_type`, `owner_id`, `file`). PDF/JPEG/PNG/WebP, ≤ 10 MB |
+| GET | `/documents/{id}/content` | Download the file (`Content-Disposition: attachment`) |
+
+| `owner_type` | Read | Upload |
+| --- | --- | --- |
+| `lease` | owning landlord/manager, the lease's tenant | owning landlord/manager |
+| `payment` | owning landlord/manager | owning landlord/manager |
+| `maintenance_request` | anyone who can see the request | anyone who can see the request |
+
 ## Health — `/health`
 
 | Method | Path | Description |
