@@ -73,12 +73,48 @@ api_image="$registry.azurecr.io/rentflow-api:$tag"
 web_image="$registry.azurecr.io/rentflow-web:$tag"
 web_args=(--build-arg "NEXT_PUBLIC_API_URL=$api_url/api/v1" --build-arg "NEXT_PUBLIC_SITE_URL=$web_url")
 
+# Build one image with ACR Tasks and wait for the run's real result.
+# Returns 0 on success, 1 if the build itself failed, 2 if ACR couldn't queue it.
+# Logs aren't streamed: on Windows the CLI crashes encoding build output for
+# the console ('charmap' codec), which says nothing about the build.
+acr_build() {
+  local repository_tag=$1 context=$2 run_id status
+  shift 2
+  if az acr repository show -n "$registry" --image "$repository_tag" -o none 2>/dev/null; then
+    log "$repository_tag already in $registry; skipping build"
+    return 0
+  fi
+  run_id=$(az acr build -r "$registry" -t "$repository_tag" --target runtime "$@" \
+    --no-wait --query runId -o tsv "$context") || return 2
+  [[ -n "$run_id" ]] || return 2
+  log "ACR run $run_id building $repository_tag"
+  while :; do
+    status=$(az acr task show-run -r "$registry" --run-id "$run_id" --query status -o tsv)
+    case "$status" in
+      Succeeded) return 0 ;;
+      Failed | Canceled | Error | Timeout)
+        warn "ACR run $run_id ended '$status'; last log lines:"
+        az acr task logs -r "$registry" --run-id "$run_id" 2>/dev/null | tail -40 >&2 || true
+        return 1
+        ;;
+    esac
+    sleep 15
+  done
+}
+
 log "Building images with ACR Tasks"
-if az acr build -r "$registry" -t "rentflow-api:$tag" --target runtime "$repo_root/backend" -o none &&
-  az acr build -r "$registry" -t "rentflow-web:$tag" --target runtime "${web_args[@]}" "$repo_root/frontend" -o none; then
+acr_build "rentflow-api:$tag" "$repo_root/backend" && api_built=0 || api_built=$?
+if ((api_built == 0)); then
+  acr_build "rentflow-web:$tag" "$repo_root/frontend" "${web_args[@]}" && web_built=0 || web_built=$?
+else
+  web_built=$api_built
+fi
+if ((api_built == 1 || web_built == 1)); then
+  die "an image failed to build (see the log above); fix it and re-run this script"
+elif ((api_built == 0 && web_built == 0)); then
   log "Images built in ACR"
 else
-  warn "ACR Tasks unavailable (often blocked on free-credit subscriptions); using local Docker"
+  warn "ACR Tasks couldn't queue a build (often blocked on free-credit subscriptions); using local Docker"
   docker info >/dev/null 2>&1 || die "start Docker Desktop, then re-run this script"
   az acr login -n "$registry"
   docker build --target runtime -t "$api_image" "$repo_root/backend"

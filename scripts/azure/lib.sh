@@ -8,6 +8,10 @@
 
 set -euo pipefail
 
+# The Azure CLI on Windows otherwise prints through the 'charmap' codec and
+# crashes on non-ASCII output (build logs, emoji in tool output).
+export PYTHONIOENCODING=utf-8
+
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*" >&2; }
 warn() { printf '\033[1;33mwarning:\033[0m %s\n' "$*" >&2; }
 die() { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
