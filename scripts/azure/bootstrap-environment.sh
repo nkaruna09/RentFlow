@@ -68,7 +68,8 @@ web_url="https://$WEB_APP.$default_domain"
 bash "$script_dir/bootstrap-secrets.sh" "$ENVIRONMENT"
 
 # --- 4. first images -------------------------------------------------------------
-tag="bootstrap-$(git -C "$repo_root" rev-parse --short HEAD)"
+# Override with BOOTSTRAP_IMAGE_TAG to reuse images from an earlier run.
+tag=${BOOTSTRAP_IMAGE_TAG:-bootstrap-$(git -C "$repo_root" rev-parse --short HEAD)}
 api_image="$registry.azurecr.io/rentflow-api:$tag"
 web_image="$registry.azurecr.io/rentflow-web:$tag"
 web_args=(--build-arg "NEXT_PUBLIC_API_URL=$api_url/api/v1" --build-arg "NEXT_PUBLIC_SITE_URL=$web_url")
@@ -84,8 +85,11 @@ acr_build() {
     log "$repository_tag already in $registry; skipping build"
     return 0
   fi
-  run_id=$(az acr build -r "$registry" -t "$repository_tag" --target runtime "$@" \
-    --no-wait --query runId -o tsv "$context") || return 2
+  local queued
+  # --no-wait returns no JSON; the run ID is only in the "Queued a build with ID: <id>" line.
+  queued=$(az acr build -r "$registry" -t "$repository_tag" --target runtime "$@" \
+    --no-wait "$context" 2>&1) || return 2
+  run_id=$(grep -oE 'Queued a build with ID: [A-Za-z0-9]+' <<<"$queued" | awk '{print $NF}' || true)
   [[ -n "$run_id" ]] || return 2
   log "ACR run $run_id building $repository_tag"
   while :; do
